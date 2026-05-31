@@ -25,6 +25,7 @@ import { Settings } from './pages/Settings'
 import { Profile } from './pages/Profile'
 import { Draw } from './pages/Draw'
 import { ADHDFun } from './pages/ADHDFun'
+import { Games } from './pages/Games'
 
 const toastStyle = {
   background: '#FFF7EF',
@@ -88,6 +89,7 @@ function AppRoutes() {
         <Route path="/worry" element={<WorryBox />} />
         <Route path="/distraction" element={<Distraction />} />
         <Route path="/adhd" element={<ADHDFun />} />
+        <Route path="/games" element={<Games />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -20,7 +20,9 @@ const moreItems = [
   { to: '/safety',     icon: '🛡️', label: 'Safe Plan' },
   { to: '/safe-people',icon: '👥', label: 'Safe People' },
   { to: '/worry',      icon: '📦', label: 'Worry Box' },
-  { to: '/distraction',icon: '🎮', label: 'Distraction' },
+  { to: '/games',      icon: '🎮', label: 'Games' },
+  { to: '/distraction',icon: '🎈', label: 'Distraction' },
+  { to: '/draw',       icon: '🎨', label: 'Draw' },
   { to: '/profile',    icon: '👤', label: 'Profile' },
   { to: '/settings',   icon: '⚙️', label: 'Settings' },
 ]
