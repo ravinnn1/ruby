@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './lib/auth'
 import { LoginPage } from './components/auth/LoginPage'
-import { Onboarding } from './components/auth/Onboarding'
 import { AppShell } from './components/layout/AppShell'
 import { LoadingState } from './components/ui/LoadingState'
 import { WelcomeSplash } from './components/ui/WelcomeSplash'
-import { supabase } from './lib/supabaseClient'
 
 // Pages
 import { Home } from './pages/Home'
@@ -40,29 +38,12 @@ const toastStyle = {
 function AppRoutes() {
   const { user, loading } = useAuth()
   const [calmOpen, setCalmOpen] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(false)
-  const [onboardingChecked, setOnboardingChecked] = useState(false)
-  // Splash shown once per session, BEFORE login form
+
+  // Splash shown once per session, before anything else
   const [splashDone, setSplashDone] = useState(() => {
     return !!sessionStorage.getItem('ruby_splash_seen')
   })
 
-  // Check if onboarding is needed
-  useEffect(() => {
-    if (!user) return
-    const checkOnboarding = async () => {
-      const { data } = await supabase
-        .from('profiles')
-        .select('onboarding_done')
-        .eq('id', user.id)
-        .single()
-      if (!data || !data.onboarding_done) setShowOnboarding(true)
-      setOnboardingChecked(true)
-    }
-    checkOnboarding()
-  }, [user])
-
-  // Show splash first (before login, before loading)
   if (!splashDone) {
     return (
       <WelcomeSplash onDismiss={() => {
@@ -72,7 +53,7 @@ function AppRoutes() {
     )
   }
 
-  if (loading || (user && !onboardingChecked)) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF7EF' }}>
         <LoadingState />
@@ -87,10 +68,6 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     )
-  }
-
-  if (showOnboarding) {
-    return <Onboarding onComplete={() => setShowOnboarding(false)} />
   }
 
   return (
