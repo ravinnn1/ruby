@@ -51,7 +51,8 @@ export function Profile() {
       setAccessory(cfg.accessory || 'none')
       setBgId(cfg.bgId || 'blush')
       setFavoriteColor(cfg.favoriteColor || '#F8C8DC')
-      setComfortActivity(data.comfort_activity || '')
+      // Support both column names for backwards compatibility
+      setComfortActivity(data.favorite_activity || data.comfort_activity || '')
     }
     setLoading(false)
   }
@@ -63,7 +64,7 @@ export function Profile() {
       id: user.id,
       display_name: displayName,
       calming_phrase: calmingPhrase,
-      comfort_activity: comfortActivity,
+      favorite_activity: comfortActivity,   // canonical column name per schema
       avatar_config: { hairColor, outfitColor, accessory, bgId, favoriteColor },
       updated_at: new Date().toISOString(),
     }

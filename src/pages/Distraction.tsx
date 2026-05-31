@@ -83,16 +83,16 @@ function TapHearts() {
   const [count, setCount] = useState(0)
   const nextId = useRef(0)
 
-  const spawnHeart = () => {
-    const id = nextId.current++
-    setHearts(prev => [...prev, { id, x: Math.random() * 80 + 10, y: Math.random() * 70 + 10, collected: false }])
-    setTimeout(() => setHearts(prev => prev.filter(h => h.id !== id)), 3000)
-  }
-
   useEffect(() => {
-    const interval = setInterval(spawnHeart, 1200)
+    // Use a ref-based spawn to avoid stale closure over `hearts` state
+    const interval = setInterval(() => {
+      const id = nextId.current++
+      setHearts(prev => [...prev, { id, x: Math.random() * 80 + 10, y: Math.random() * 70 + 10, collected: false }])
+      // Auto-remove after 3 s if not collected
+      setTimeout(() => setHearts(prev => prev.filter(h => h.id !== id)), 3000)
+    }, 1200)
     return () => clearInterval(interval)
-  }, [])
+  }, []) // empty deps — interval never needs to re-register
 
   const collect = (id: number) => {
     setHearts(prev => prev.map(h => h.id === id ? { ...h, collected: true } : h))

@@ -46,12 +46,28 @@ export function SafePlan() {
   const handleSave = async () => {
     if (!user) return
     setSaving(true)
+
+    // Safely parse safe_people JSON — show a friendly error if invalid
+    let parsedSafePeople: unknown[] = []
+    if (safePeople.trim()) {
+      try {
+        const parsed = JSON.parse(safePeople)
+        parsedSafePeople = Array.isArray(parsed) ? parsed : []
+      } catch {
+        toast.error('Safe people field has invalid JSON. Please check the format.', {
+          style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
+        })
+        setSaving(false)
+        return
+      }
+    }
+
     const payload = {
       user_id: user.id,
       warning_signs: warningSigns.split('\n').filter(Boolean),
       helpful_actions: helpfulActions.split('\n').filter(Boolean),
       unhelpful_actions: unhelpfulActions.split('\n').filter(Boolean),
-      safe_people: safePeople ? JSON.parse(safePeople) : [],
+      safe_people: parsedSafePeople,
       safe_places: safePlaces.split('\n').filter(Boolean),
       emergency_steps: emergencySteps.split('\n').filter(Boolean),
       reassurance_text: reassuranceText,

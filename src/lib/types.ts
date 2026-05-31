@@ -160,8 +160,8 @@ export interface SafePlan {
   safe_places: string[]
   emergency_steps: string[]
   reassurance_text: string | null
-  want_to_hear: string | null
-  dont_want_to_hear: string | null
+  want_said: string | null
+  dont_want_said: string | null
   created_at: string
   updated_at: string
 }
@@ -197,6 +197,6 @@ export type Theme = 'soft-ruby' | 'pink-matcha' | 'cream-garden' | 'deep-ruby-ni
 export type Mood =
   | 'calm' | 'anxious' | 'sad' | 'angry' | 'overwhelmed'
   | 'numb' | 'hopeful' | 'happy' | 'tired' | 'proud'
-  | 'okay' | 'scared' | 'scared'
+  | 'okay' | 'scared'
 
 export type Heaviness = 'light' | 'manageable' | 'heavy' | 'overwhelming'
