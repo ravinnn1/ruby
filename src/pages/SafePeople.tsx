@@ -216,10 +216,18 @@ export function SafePeople() {
       {/* People list */}
       {people.length === 0 && !showForm ? (
         <EmptyState
-          emoji="👥"
+          icon="👥"
           title="No safe people yet"
           message="Add someone who helps you feel less alone."
-          action={{ label: 'Add someone', onClick: () => setShowForm(true) }}
+          action={
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-5 py-2.5 rounded-2xl text-white text-sm font-medium"
+              style={{ background: 'linear-gradient(135deg, #8B0D1A, #B83A55)' }}
+            >
+              Add someone 💗
+            </button>
+          }
         />
       ) : (
         <div className="space-y-3">
