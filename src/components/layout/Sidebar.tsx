@@ -1,82 +1,93 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import {
-  Home, BookOpen, Flower2, Heart, Camera, RotateCcw,
-  Mail, DollarSign, Shield, Box, Gamepad2, Settings, User, Pencil
-} from 'lucide-react'
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home', emoji: '🏡' },
-  { to: '/journal', icon: BookOpen, label: 'Journal', emoji: '📖' },
-  { to: '/draw', icon: Pencil, label: 'Draw', emoji: '🎨' },
-  { to: '/mood', icon: Flower2, label: 'Mood Garden', emoji: '🌸' },
-  { to: '/episodes', icon: Heart, label: 'Episode Support', emoji: '💗' },
-  { to: '/vault', icon: Heart, label: 'Comfort Vault', emoji: '💎' },
-  { to: '/memories', icon: Camera, label: 'Memories', emoji: '📷' },
-  { to: '/routines', icon: RotateCcw, label: 'Routines', emoji: '🌿' },
-  { to: '/letters', icon: Mail, label: 'Letters', emoji: '✉️' },
-  { to: '/budget', icon: DollarSign, label: 'Soft Budget', emoji: '🌷' },
-  { to: '/safety', icon: Shield, label: 'Safe Plan', emoji: '🛡️' },
-  { to: '/worry', icon: Box, label: 'Worry Box', emoji: '📦' },
-  { to: '/distraction', icon: Gamepad2, label: 'Distraction', emoji: '🎮' },
-  { to: '/adhd', icon: Pencil, label: 'ADHD Fun', emoji: '✨' },
+  { to: '/',            emoji: '🏡', label: 'Home' },
+  { to: '/journal',     emoji: '📖', label: 'Journal' },
+  { to: '/mood',        emoji: '🌸', label: 'Mood Garden' },
+  { to: '/vault',       emoji: '🔮', label: 'Comfort Vault' },
+  { to: '/episodes',    emoji: '💗', label: 'Episodes' },
+  { to: '/memories',    emoji: '📷', label: 'Memories' },
+  { to: '/routines',    emoji: '🌿', label: 'Routines' },
+  { to: '/letters',     emoji: '✉️',  label: 'Letters' },
+  { to: '/budget',      emoji: '🌷', label: 'Soft Budget' },
+  { to: '/safety',      emoji: '🛡️',  label: 'Safe Plan' },
+  { to: '/safe-people', emoji: '👥', label: 'Safe People' },
+  { to: '/worry',       emoji: '📦', label: 'Worry Box' },
+  { to: '/distraction', emoji: '🎮', label: 'Distraction' },
+  { to: '/draw',        emoji: '🎨', label: 'Draw' },
+  { to: '/adhd',        emoji: '✨', label: 'ADHD Fun' },
 ]
 
 const bottomItems = [
-  { to: '/profile', icon: User, label: 'Profile', emoji: '👤' },
-  { to: '/settings', icon: Settings, label: 'Settings', emoji: '⚙️' },
+  { to: '/profile',  emoji: '👤', label: 'Profile' },
+  { to: '/settings', emoji: '⚙️',  label: 'Settings' },
 ]
 
 export function Sidebar() {
+  const linkClass = (isActive: boolean) =>
+    `flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm transition-all duration-200 ${
+      isActive
+        ? 'bg-[#B83A55]/15 text-[#8B0D1A] font-semibold'
+        : 'text-[#6B5560] hover:bg-[#F2A8C8]/30 hover:text-[#2E1F25]'
+    }`
+
   return (
-    <aside className="hidden lg:flex flex-col w-64 min-h-screen bg-white/80 backdrop-blur-md border-r border-[#F8C8DC]/50 fixed left-0 top-0 bottom-0 z-30">
+    <aside
+      className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-30 overflow-y-auto"
+      style={{
+        background: 'rgba(255,245,236,0.92)',
+        backdropFilter: 'blur(16px)',
+        borderRight: '1.5px solid rgba(242,168,200,0.35)',
+        boxShadow: '4px 0 24px rgba(46,31,37,0.06)',
+      }}
+    >
       {/* Logo */}
-      <div className="px-6 py-6 border-b border-[#F8C8DC]/40">
+      <div className="px-6 py-6 shrink-0">
         <div className="flex items-center gap-3">
-          <span className="text-2xl">💎</span>
+          <div
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-lg"
+            style={{ background: 'linear-gradient(135deg, #8B0D1A, #B83A55)' }}
+          >
+            💎
+          </div>
           <div>
-            <h1 className="font-display text-lg text-[#3A2A2F] leading-tight">Ruby's Safe Place</h1>
-            <p className="text-xs text-[#7A6670]">Your private sanctuary</p>
+            <p className="font-display text-base text-[#2E1F25] leading-tight">Ruby&apos;s Safe Place</p>
+            <p className="text-[10px] text-[#6B5560]">A quiet corner for you</p>
           </div>
         </div>
       </div>
 
+      {/* Divider */}
+      <div className="mx-4 h-px mb-3" style={{ background: 'rgba(242,168,200,0.4)' }} />
+
       {/* Nav items */}
-      <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-0.5" aria-label="Main navigation">
-        {navItems.map(({ to, label, emoji }) => (
+      <nav className="flex-1 px-3 space-y-0.5" aria-label="Main navigation">
+        {navItems.map(({ to, emoji, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-[#C94C63]/15 to-[#F8C8DC]/20 text-[#9B111E] font-medium'
-                  : 'text-[#7A6670] hover:bg-[#F8C8DC]/20 hover:text-[#3A2A2F]'
-              }`
-            }
+            className={({ isActive }) => linkClass(isActive)}
+            aria-label={label}
           >
-            <span className="text-base w-5 text-center">{emoji}</span>
+            <span className="text-base w-6 text-center shrink-0">{emoji}</span>
             <span>{label}</span>
           </NavLink>
         ))}
       </nav>
 
       {/* Bottom items */}
-      <div className="px-3 py-4 border-t border-[#F8C8DC]/40 space-y-0.5">
-        {bottomItems.map(({ to, label, emoji }) => (
+      <div className="px-3 pb-6 space-y-0.5 shrink-0">
+        <div className="mx-1 h-px mb-3" style={{ background: 'rgba(242,168,200,0.4)' }} />
+        {bottomItems.map(({ to, emoji, label }) => (
           <NavLink
             key={to}
             to={to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm transition-all duration-200 ${
-                isActive
-                  ? 'bg-gradient-to-r from-[#C94C63]/15 to-[#F8C8DC]/20 text-[#9B111E] font-medium'
-                  : 'text-[#7A6670] hover:bg-[#F8C8DC]/20 hover:text-[#3A2A2F]'
-              }`
-            }
+            className={({ isActive }) => linkClass(isActive)}
+            aria-label={label}
           >
-            <span className="text-base w-5 text-center">{emoji}</span>
+            <span className="text-base w-6 text-center shrink-0">{emoji}</span>
             <span>{label}</span>
           </NavLink>
         ))}

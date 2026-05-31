@@ -1,42 +1,49 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import { Home, BookOpen, Flower2, Heart, Pencil, MoreHorizontal } from 'lucide-react'
 
+// Show the 6 most important pages in the mobile bottom nav
 const navItems = [
-  { to: '/', icon: Home, label: 'Home', emoji: '🏡' },
-  { to: '/journal', icon: BookOpen, label: 'Journal', emoji: '📖' },
-  { to: '/draw', icon: Pencil, label: 'Draw', emoji: '🎨' },
-  { to: '/mood', icon: Flower2, label: 'Mood', emoji: '🌸' },
-  { to: '/vault', icon: Heart, label: 'Vault', emoji: '💎' },
-  { to: '/adhd', icon: Pencil, label: 'Fun', emoji: '✨' },
+  { to: '/',        emoji: '🏡', label: 'Home' },
+  { to: '/journal', emoji: '📖', label: 'Journal' },
+  { to: '/mood',    emoji: '🌸', label: 'Mood' },
+  { to: '/vault',   emoji: '🔮', label: 'Vault' },
+  { to: '/episodes',emoji: '💗', label: 'Episodes' },
+  { to: '/profile', emoji: '👤', label: 'Profile' },
 ]
 
 export function BottomNav() {
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-md border-t border-[#F8C8DC]/60"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+      className="fixed bottom-0 left-0 right-0 z-40"
+      style={{
+        background: 'rgba(255,245,236,0.94)',
+        backdropFilter: 'blur(16px)',
+        borderTop: '1.5px solid rgba(242,168,200,0.4)',
+        boxShadow: '0 -4px 20px rgba(46,31,37,0.07)',
+        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+      }}
       aria-label="Main navigation"
     >
-      <div className="flex items-center justify-around px-2 py-2">
-        {navItems.map(({ to, icon: Icon, label }) => (
+      <div className="flex items-center justify-around px-1 py-2">
+        {navItems.map(({ to, emoji, label }) => (
           <NavLink
             key={to}
             to={to}
             end={to === '/'}
             className={({ isActive }) =>
-              `flex flex-col items-center gap-0.5 px-3 py-2 rounded-2xl transition-all duration-200 min-w-[56px] ${
-                isActive
-                  ? 'text-[#9B111E]'
-                  : 'text-[#7A6670] hover:text-[#C94C63]'
+              `flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-2xl transition-all duration-200 min-w-[52px] ${
+                isActive ? 'text-[#8B0D1A]' : 'text-[#6B5560] hover:text-[#B83A55]'
               }`
             }
             aria-label={label}
           >
             {({ isActive }) => (
               <>
-                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-[#C94C63]/15' : ''}`}>
-                  <Icon size={20} strokeWidth={isActive ? 2.5 : 1.8} />
+                <div
+                  className="p-1.5 rounded-xl transition-all"
+                  style={isActive ? { background: 'rgba(184,58,85,0.14)' } : {}}
+                >
+                  <span className="text-lg leading-none">{emoji}</span>
                 </div>
                 <span className="text-[10px] font-medium">{label}</span>
               </>

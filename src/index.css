@@ -9,18 +9,21 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
 }
 
 @theme {
-  --color-blush: #F8C8DC;
-  --color-soft-pink: #FADADD;
-  --color-rose: #E8A3B8;
-  --color-matcha: #A8C686;
-  --color-matcha-dark: #6F8F5F;
-  --color-cream: #FFF7EF;
-  --color-ruby: #9B111E;
-  --color-ruby-soft: #C94C63;
-  --color-rose-gold: #B76E79;
-  --color-text-dark: #3A2A2F;
-  --color-text-muted: #7A6670;
-  --color-card: rgba(255,255,255,0.75);
+  /* ── Deeper pink/matcha palette ── */
+  --color-blush: #F2A8C8;
+  --color-soft-pink: #F7C5D8;
+  --color-rose: #E07AA0;
+  --color-deep-pink: #D4547A;
+  --color-matcha: #7DB87A;
+  --color-matcha-light: #A8D4A5;
+  --color-matcha-dark: #4A7A47;
+  --color-cream: #FFF5EC;
+  --color-ruby: #8B0D1A;
+  --color-ruby-soft: #B83A55;
+  --color-rose-gold: #A85C6A;
+  --color-text-dark: #2E1F25;
+  --color-text-muted: #6B5560;
+  --color-card: rgba(255,245,236,0.85);
 
   --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'Inter', system-ui, sans-serif;
@@ -39,8 +42,8 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
   }
 
   body {
-    background-color: #FFF7EF;
-    color: #3A2A2F;
+    background-color: #FFF5EC;
+    color: #2E1F25;
     min-height: 100vh;
   }
 
@@ -50,19 +53,19 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
 
   /* Scrollbar styling */
   ::-webkit-scrollbar {
-    width: 6px;
+    width: 5px;
   }
   ::-webkit-scrollbar-track {
-    background: #FFF7EF;
+    background: #FFF5EC;
   }
   ::-webkit-scrollbar-thumb {
-    background: #E8A3B8;
+    background: #E07AA0;
     border-radius: 3px;
   }
 
   /* Focus styles */
   :focus-visible {
-    outline: 2px solid #C94C63;
+    outline: 2px solid #B83A55;
     outline-offset: 2px;
     border-radius: 4px;
   }
@@ -77,46 +80,94 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
     font-family: 'Inter', system-ui, sans-serif;
   }
 
+  /* Deeper gem border */
   .gem-border {
-    border: 1.5px solid rgba(183, 110, 121, 0.3);
+    border: 1.5px solid rgba(168, 92, 106, 0.35);
   }
 
+  /* Richer ruby glow */
   .ruby-glow {
-    box-shadow: 0 0 20px rgba(155, 17, 30, 0.15), 0 4px 20px rgba(201, 76, 99, 0.1);
+    box-shadow: 0 0 24px rgba(139, 13, 26, 0.2), 0 4px 24px rgba(184, 58, 85, 0.15);
   }
 
   .soft-shadow {
-    box-shadow: 0 4px 24px rgba(58, 42, 47, 0.08), 0 1px 4px rgba(58, 42, 47, 0.04);
+    box-shadow: 0 4px 28px rgba(46, 31, 37, 0.1), 0 1px 4px rgba(46, 31, 37, 0.05);
   }
 
   .card-glass {
-    background: rgba(255, 255, 255, 0.75);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(255, 245, 236, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
   }
 
+  /* Deeper pink/matcha gradient background */
   .gradient-bg {
-    background: linear-gradient(135deg, #FFF7EF 0%, #FADADD 30%, #FFF7EF 60%, #F0F7E8 100%);
+    background: linear-gradient(
+      135deg,
+      #FFF5EC 0%,
+      #F7C5D8 25%,
+      #FFF5EC 50%,
+      #D4EDD0 75%,
+      #FFF5EC 100%
+    );
     background-size: 400% 400%;
-    animation: gradientShift 20s ease infinite;
+    animation: gradientShift 22s ease infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .gradient-bg {
       animation: none;
+      background: linear-gradient(135deg, #FFF5EC 0%, #F7C5D8 50%, #D4EDD0 100%);
     }
   }
 
   .ruby-gradient {
-    background: linear-gradient(135deg, #9B111E, #C94C63);
+    background: linear-gradient(135deg, #8B0D1A, #B83A55);
   }
 
   .matcha-gradient {
-    background: linear-gradient(135deg, #A8C686, #6F8F5F);
+    background: linear-gradient(135deg, #7DB87A, #4A7A47);
   }
 
   .blush-gradient {
-    background: linear-gradient(135deg, #F8C8DC, #FADADD);
+    background: linear-gradient(135deg, #F2A8C8, #F7C5D8);
+  }
+
+  /* Deeper pink card */
+  .card-pink {
+    background: linear-gradient(135deg, rgba(242,168,200,0.25) 0%, rgba(247,197,216,0.35) 100%);
+    border: 1.5px solid rgba(212,84,122,0.25);
+  }
+
+  /* Matcha card */
+  .card-matcha {
+    background: linear-gradient(135deg, rgba(125,184,122,0.18) 0%, rgba(74,122,71,0.12) 100%);
+    border: 1.5px solid rgba(74,122,71,0.25);
+  }
+
+  /* Faceted gem card border */
+  .gem-facet {
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    position: relative;
+  }
+  .gem-facet::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: inherit;
+    background: linear-gradient(135deg, #F2A8C8, #B83A55, #7DB87A, #F2A8C8);
+    z-index: -1;
+    opacity: 0.4;
+  }
+
+  /* Sparkle dots */
+  .sparkle-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #F2A8C8;
+    animation: sparkle 2.5s ease-in-out infinite;
   }
 }
 
@@ -156,6 +207,11 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
   100% { background-position: 200% 0; }
 }
 
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 12px rgba(184,58,85,0.4); }
+  50% { box-shadow: 0 0 28px rgba(184,58,85,0.7), 0 0 48px rgba(184,58,85,0.3); }
+}
+
 .animate-breathe-in {
   animation: breatheIn 4s ease-in-out forwards;
 }
@@ -176,8 +232,12 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
   animation: fadeUp 0.4s ease-out forwards;
 }
 
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
 .skeleton {
-  background: linear-gradient(90deg, #F8C8DC 25%, #FADADD 50%, #F8C8DC 75%);
+  background: linear-gradient(90deg, #F2A8C8 25%, #F7C5D8 50%, #F2A8C8 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
@@ -188,6 +248,7 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
   .animate-sparkle,
   .animate-float,
   .animate-fade-up,
+  .animate-pulse-glow,
   .skeleton {
     animation: none;
   }

@@ -1,265 +1,273 @@
-import { lazy, Suspense } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import Dock from '../components/ui/Dock'
-import { formatDate } from '../lib/dateUtils'
+import { formatFullDate, getGreeting } from '../lib/dateUtils'
 
-// Lazy-load heavy Ballpit
-const Ballpit = lazy(() => import('../components/ui/Ballpit'))
+// ── Colour tokens (deeper palette) ────────────────────────
+const C = {
+  ruby:      '#8B0D1A',
+  rubySoft:  '#B83A55',
+  blush:     '#F2A8C8',
+  softPink:  '#F7C5D8',
+  matcha:    '#7DB87A',
+  matchaDk:  '#4A7A47',
+  cream:     '#FFF5EC',
+  textDark:  '#2E1F25',
+  textMuted: '#6B5560',
+}
 
-// ── All navigatable pages ──────────────────────────────────────
-const ALL_PAGES = [
-  { emoji: '📖', label: 'Journal',       route: '/journal',     color: '#9B111E', bg: 'rgba(155,17,30,0.08)' },
-  { emoji: '🌸', label: 'Mood Garden',   route: '/mood',        color: '#C94C63', bg: 'rgba(201,76,99,0.08)' },
-  { emoji: '💗', label: 'Episodes',      route: '/episodes',    color: '#E8A3B8', bg: 'rgba(232,163,184,0.15)' },
-  { emoji: '💎', label: 'Comfort Vault', route: '/vault',       color: '#B76E79', bg: 'rgba(183,110,121,0.1)' },
-  { emoji: '📷', label: 'Memories',      route: '/memories',    color: '#C94C63', bg: 'rgba(248,200,220,0.2)' },
-  { emoji: '🌿', label: 'Routines',      route: '/routines',    color: '#6F8F5F', bg: 'rgba(168,198,134,0.15)' },
-  { emoji: '✉️', label: 'Letters',       route: '/letters',     color: '#B76E79', bg: 'rgba(183,110,121,0.1)' },
-  { emoji: '🌷', label: 'Soft Budget',   route: '/budget',      color: '#C94C63', bg: 'rgba(201,76,99,0.08)' },
-  { emoji: '🛡️', label: 'Safe Plan',     route: '/safety',      color: '#9B111E', bg: 'rgba(155,17,30,0.08)' },
-  { emoji: '📦', label: 'Worry Box',     route: '/worry',       color: '#A8C686', bg: 'rgba(168,198,134,0.15)' },
-  { emoji: '🎮', label: 'Distraction',   route: '/distraction', color: '#B76E79', bg: 'rgba(183,110,121,0.1)' },
-  { emoji: '🎨', label: 'Draw',          route: '/draw',        color: '#C94C63', bg: 'rgba(248,200,220,0.2)' },
-  { emoji: '✨', label: 'ADHD Fun',      route: '/adhd',        color: '#9B111E', bg: 'rgba(155,17,30,0.08)' },
-  { emoji: '👤', label: 'Profile',       route: '/profile',     color: '#7A6670', bg: 'rgba(122,102,112,0.08)' },
-  { emoji: '⚙️', label: 'Settings',      route: '/settings',    color: '#7A6670', bg: 'rgba(122,102,112,0.08)' },
+// ── Primary 4 action cards ─────────────────────────────────
+const PRIMARY_ACTIONS = [
+  {
+    emoji: '💎',
+    label: 'I need calm',
+    sub: 'Open the calm space',
+    action: 'calm',
+    bg: `linear-gradient(135deg, ${C.ruby}18, ${C.rubySoft}22)`,
+    border: `${C.rubySoft}40`,
+    color: C.ruby,
+  },
+  {
+    emoji: '📖',
+    label: 'Write it out',
+    sub: 'Open your journal',
+    action: 'journal',
+    bg: `linear-gradient(135deg, ${C.blush}30, ${C.softPink}40)`,
+    border: `${C.blush}60`,
+    color: C.rubySoft,
+  },
+  {
+    emoji: '🔮',
+    label: 'Comfort Vault',
+    sub: 'Open something safe',
+    action: 'vault',
+    bg: `linear-gradient(135deg, ${C.softPink}25, ${C.blush}35)`,
+    border: `${C.rubySoft}30`,
+    color: C.rubySoft,
+  },
+  {
+    emoji: '🌸',
+    label: 'Log how I feel',
+    sub: 'Mood garden',
+    action: 'mood',
+    bg: `linear-gradient(135deg, ${C.matcha}18, ${C.matchaDk}12)`,
+    border: `${C.matcha}40`,
+    color: C.matchaDk,
+  },
 ]
 
-// Dock items — quick-access top 6
-const DOCK_ITEMS_DEF = [
-  { emoji: '📖', label: 'Journal',   route: '/journal' },
-  { emoji: '🌸', label: 'Mood',      route: '/mood' },
-  { emoji: '💎', label: 'Vault',     route: '/vault' },
-  { emoji: '📷', label: 'Memories',  route: '/memories' },
-  { emoji: '📦', label: 'Worry Box', route: '/worry' },
-  { emoji: '✨', label: 'ADHD Fun',  route: '/adhd' },
+// ── Secondary nav tiles ────────────────────────────────────
+const SECONDARY = [
+  { emoji: '💗', label: 'Episodes',    route: '/episodes' },
+  { emoji: '📷', label: 'Memories',   route: '/memories' },
+  { emoji: '🌿', label: 'Routines',   route: '/routines' },
+  { emoji: '✉️', label: 'Letters',    route: '/letters' },
+  { emoji: '🌷', label: 'Budget',     route: '/budget' },
+  { emoji: '🛡️', label: 'Safe Plan',  route: '/safety' },
+  { emoji: '📦', label: 'Worry Box',  route: '/worry' },
+  { emoji: '👥', label: 'Safe People',route: '/safe-people' },
+  { emoji: '🎮', label: 'Distract',   route: '/distraction' },
+  { emoji: '✨', label: 'ADHD Fun',   route: '/adhd' },
+  { emoji: '👤', label: 'Profile',    route: '/profile' },
+  { emoji: '⚙️', label: 'Settings',   route: '/settings' },
 ]
 
-// Ruby-pink ball colors (hex numbers)
-const BALL_COLORS = [0xF8C8DC, 0xC94C63, 0x9B111E, 0xB76E79, 0xA8C686, 0xFADADD]
+// ── Affirmations ───────────────────────────────────────────
+const AFFIRMATIONS = [
+  'You do not have to solve everything right now.',
+  'One breath first. That is enough.',
+  'You made it here. That counts.',
+  'This is a safe little place to land.',
+  'Today can be soft.',
+  'A tiny step is still movement.',
+  'You are allowed to rest.',
+  'Nothing has to be perfect to be worth saving.',
+  'Let\'s make this moment smaller.',
+  'You are safe in this moment.',
+]
 
-export function Home() {
+interface HomeProps {
+  onOpenCalm?: () => void
+}
+
+export function Home({ onOpenCalm }: HomeProps) {
   const navigate = useNavigate()
-  const today = formatDate(new Date().toISOString())
+  const [affirmIdx] = useState(() => Math.floor(Math.random() * AFFIRMATIONS.length))
 
-  const dockItems = DOCK_ITEMS_DEF.map(item => ({
-    icon: <span style={{ fontSize: '1.4rem' }}>{item.emoji}</span>,
-    label: item.label,
-    onClick: () => navigate(item.route),
-  }))
+  const handleAction = (action: string) => {
+    if (action === 'calm') {
+      onOpenCalm?.()
+    } else if (action === 'journal') {
+      navigate('/journal')
+    } else if (action === 'vault') {
+      navigate('/vault')
+    } else if (action === 'mood') {
+      navigate('/mood')
+    }
+  }
 
   return (
     <div
-      className="space-y-8 pb-32 pt-2"
-      style={{ background: 'linear-gradient(160deg, #FFF7EF 0%, #FADADD 40%, #f0faf5 100%)', minHeight: '100vh' }}
+      className="min-h-screen pb-32"
+      style={{
+        background: `linear-gradient(160deg, ${C.cream} 0%, ${C.softPink}55 35%, ${C.cream} 60%, #D4EDD0 100%)`,
+      }}
     >
-      {/* ── Header ─────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: -12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="text-center pt-4"
-      >
-        <div className="text-5xl mb-2 animate-float">💎</div>
-        <h1 className="font-display text-3xl text-[#3A2A2F] mb-1">Hi, Ruby. 🌸</h1>
-        <p className="text-sm text-[#7A6670]">{today} · Your safe place is ready.</p>
-      </motion.div>
-
-      {/* ── Affirmation card ───────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.97 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mx-4 rounded-3xl p-5 text-center"
+      {/* ── Decorative blobs ──────────────────────────── */}
+      <div
+        className="fixed top-0 left-0 w-80 h-80 rounded-full pointer-events-none"
         style={{
-          background: 'linear-gradient(135deg, rgba(248,200,220,0.4) 0%, rgba(201,76,99,0.1) 100%)',
-          border: '1.5px solid rgba(201,76,99,0.2)',
-          boxShadow: '0 4px 24px rgba(201,76,99,0.08)',
+          background: `radial-gradient(circle, ${C.blush}35 0%, transparent 70%)`,
+          transform: 'translate(-40%, -40%)',
+          zIndex: 0,
         }}
-      >
-        <p className="font-display text-lg text-[#9B111E] italic leading-relaxed">
-          "You do not have to solve everything right now."
-        </p>
-        <p className="text-xs text-[#7A6670] mt-2">One breath first. 🌿</p>
-      </motion.div>
+      />
+      <div
+        className="fixed bottom-20 right-0 w-64 h-64 rounded-full pointer-events-none"
+        style={{
+          background: `radial-gradient(circle, ${C.matcha}25 0%, transparent 70%)`,
+          transform: 'translate(30%, 30%)',
+          zIndex: 0,
+        }}
+      />
 
-      {/* ── Nav pills — all pages ──────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="px-4"
-      >
-        <h2 className="font-display text-lg text-[#3A2A2F] mb-3 flex items-center gap-2">
-          <span>💎</span> Your Sanctuary
-        </h2>
-        <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 p-1">
-          {ALL_PAGES.map((page, i) => (
+      <div className="relative z-10 max-w-lg mx-auto px-4 pt-8 space-y-8">
+
+        {/* ── Greeting ──────────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: -16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: 'easeOut' }}
+          className="text-center"
+        >
+          <motion.div
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+            className="text-5xl mb-3"
+            aria-hidden="true"
+          >
+            💎
+          </motion.div>
+          <h1 className="font-display text-4xl mb-2" style={{ color: C.textDark }}>
+            Hi Ruby.
+          </h1>
+          <p className="text-base mb-1" style={{ color: C.rubySoft }}>
+            You are safe here. One breath first.
+          </p>
+          <p className="text-xs" style={{ color: C.textMuted }}>
+            {getGreeting()} · {formatFullDate()}
+          </p>
+        </motion.div>
+
+        {/* ── Affirmation ───────────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.97 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-3xl px-6 py-5 text-center"
+          style={{
+            background: `linear-gradient(135deg, ${C.blush}35, ${C.softPink}45)`,
+            border: `1.5px solid ${C.blush}80`,
+            boxShadow: `0 4px 24px ${C.rubySoft}12`,
+          }}
+        >
+          <p className="font-display text-lg italic leading-relaxed" style={{ color: C.ruby }}>
+            "{AFFIRMATIONS[affirmIdx]}"
+          </p>
+          <div className="flex justify-center gap-1.5 mt-3">
+            {[0,1,2].map(i => (
+              <div key={i} className="sparkle-dot" style={{ animationDelay: `${i * 0.4}s` }} />
+            ))}
+          </div>
+        </motion.div>
+
+        {/* ── Primary 4 action cards ────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            {PRIMARY_ACTIONS.map((item, i) => (
+              <motion.button
+                key={item.label}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.22 + i * 0.07, type: 'spring', stiffness: 240, damping: 22 }}
+                whileHover={{ scale: 1.04, y: -2 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => handleAction(item.action)}
+                className="flex flex-col items-start gap-2 p-5 rounded-3xl text-left transition-all"
+                style={{
+                  background: item.bg,
+                  border: `1.5px solid ${item.border}`,
+                  boxShadow: `0 4px 20px ${item.color}10`,
+                  minHeight: '110px',
+                }}
+              >
+                <span className="text-3xl">{item.emoji}</span>
+                <div>
+                  <p className="font-semibold text-sm leading-tight" style={{ color: item.color }}>
+                    {item.label}
+                  </p>
+                  <p className="text-xs mt-0.5" style={{ color: C.textMuted }}>
+                    {item.sub}
+                  </p>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </motion.div>
+
+        {/* ── Divider ───────────────────────────────── */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px" style={{ background: `${C.blush}60` }} />
+          <span className="text-xs" style={{ color: C.textMuted }}>everything else</span>
+          <div className="flex-1 h-px" style={{ background: `${C.blush}60` }} />
+        </div>
+
+        {/* ── Secondary nav grid ────────────────────── */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45 }}
+          className="grid grid-cols-4 gap-2"
+        >
+          {SECONDARY.map((item, i) => (
             <motion.button
-              key={page.route}
-              initial={{ opacity: 0, scale: 0.85 }}
+              key={item.route}
+              initial={{ opacity: 0, scale: 0.88 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.18 + i * 0.03, type: 'spring', stiffness: 260, damping: 20 }}
-              whileHover={{ scale: 1.07, y: -2 }}
+              transition={{ delay: 0.48 + i * 0.03, type: 'spring', stiffness: 260, damping: 22 }}
+              whileHover={{ scale: 1.08, y: -2 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate(page.route)}
-              className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all"
+              onClick={() => navigate(item.route)}
+              className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl transition-all"
               style={{
-                background: page.bg,
-                border: `1.5px solid ${page.color}22`,
-                boxShadow: '0 2px 12px rgba(58,42,47,0.06)',
+                background: 'rgba(255,245,236,0.7)',
+                border: `1px solid ${C.blush}50`,
+                boxShadow: `0 2px 10px ${C.textDark}06`,
               }}
             >
-              <span className="text-2xl">{page.emoji}</span>
-              <span
-                className="text-[11px] font-semibold text-center leading-tight"
-                style={{ color: page.color }}
-              >
-                {page.label}
+              <span className="text-xl">{item.emoji}</span>
+              <span className="text-[10px] font-medium text-center leading-tight" style={{ color: C.textMuted }}>
+                {item.label}
               </span>
             </motion.button>
           ))}
-        </div>
-      </motion.div>
+        </motion.div>
 
-      {/* ── Ballpit ────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.3 }}
-        className="mx-4"
-      >
-        <h2 className="font-display text-lg text-[#3A2A2F] mb-3 flex items-center gap-2">
-          <span>🎀</span> Balls!
-        </h2>
-        <div
-          style={{
-            position: 'relative',
-            height: 400,
-            width: '100%',
-            borderRadius: '1.5rem',
-            overflow: 'hidden',
-            border: '1.5px solid rgba(201,76,99,0.15)',
-            boxShadow: '0 8px 32px rgba(201,76,99,0.1)',
-          }}
+        {/* ── Soft footer ───────────────────────────── */}
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.7 }}
+          className="text-center text-xs pb-4 italic"
+          style={{ color: `${C.textMuted}80` }}
         >
-          <Suspense
-            fallback={
-              <div
-                style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <div className="text-center">
-                  <div className="text-4xl mb-2 animate-pulse">🎀</div>
-                  <p className="text-sm text-[#7A6670]">Loading balls…</p>
-                </div>
-              </div>
-            }
-          >
-            <Ballpit
-              count={120}
-              gravity={0.7}
-              friction={0.9975}
-              wallBounce={0.95}
-              followCursor={true}
-              colors={BALL_COLORS}
-              minSize={0.4}
-              maxSize={0.9}
-            />
-          </Suspense>
-        </div>
-        <p className="text-center text-xs text-[#7A6670]/50 mt-2">
-          Move your cursor in to push the balls around 🌸
-        </p>
-      </motion.div>
-
-      {/* ── Quick actions ──────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="px-4"
-      >
-        <h2 className="font-display text-lg text-[#3A2A2F] mb-3 flex items-center gap-2">
-          <span>🌸</span> Quick Reach
-        </h2>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { emoji: '📖', label: 'Write it out',  sub: 'Open your journal',   route: '/journal',     color: '#9B111E' },
-            { emoji: '💎', label: 'Comfort Vault', sub: 'Open something safe', route: '/vault',       color: '#B76E79' },
-            { emoji: '📦', label: 'Worry Box',     sub: 'Put a worry away',    route: '/worry',       color: '#A8C686' },
-            { emoji: '🌸', label: 'Mood Garden',   sub: 'Log how you feel',    route: '/mood',        color: '#C94C63' },
-          ].map((item, i) => (
-            <motion.button
-              key={item.label}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.38 + i * 0.05 }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => navigate(item.route)}
-              className="flex items-center gap-3 p-4 rounded-2xl text-left transition-all"
-              style={{
-                background: 'rgba(255,255,255,0.8)',
-                border: `1.5px solid ${item.color}22`,
-                boxShadow: '0 2px 12px rgba(58,42,47,0.06)',
-              }}
-            >
-              <span className="text-2xl">{item.emoji}</span>
-              <div>
-                <p className="text-sm font-semibold" style={{ color: item.color }}>{item.label}</p>
-                <p className="text-xs text-[#7A6670]">{item.sub}</p>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* ── Dock ───────────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="px-4"
-      >
-        <h2 className="font-display text-lg text-[#3A2A2F] mb-3 flex items-center gap-2">
-          <span>⭐</span> Quick Dock
-        </h2>
-        <div
-          style={{
-            position: 'relative',
-            height: 160,
-            borderRadius: '1.5rem',
-            overflow: 'hidden',
-            background: 'linear-gradient(135deg, rgba(248,200,220,0.2) 0%, rgba(168,198,134,0.1) 100%)',
-            border: '1.5px solid rgba(201,76,99,0.15)',
-            boxShadow: '0 4px 20px rgba(201,76,99,0.08)',
-          }}
-        >
-          <Dock
-            items={dockItems}
-            panelHeight={60}
-            baseItemSize={44}
-            magnification={64}
-            distance={120}
-          />
-        </div>
-        <p className="text-center text-xs text-[#7A6670]/50 mt-2">
-          Hover over the icons to magnify ✨
-        </p>
-      </motion.div>
-
-      {/* ── Soft footer ────────────────────────────────── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.5 }}
-        className="text-center px-4 pb-4"
-      >
-        <p className="text-xs text-[#7A6670]/60 italic">
           "This is a safe little place to land." 💎
-        </p>
-      </motion.div>
+        </motion.p>
+      </div>
     </div>
   )
 }

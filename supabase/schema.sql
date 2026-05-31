@@ -1,6 +1,32 @@
 -- ============================================================
 -- Ruby's Safe Place — Supabase Schema
 -- ============================================================
+
+-- safe_people table (added in v2 upgrade)
+create table if not exists public.safe_people (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  relationship text,
+  contact text,
+  helps_with text,
+  what_to_say text,
+  notes text,
+  created_at timestamptz default now()
+);
+
+alter table public.safe_people enable row level security;
+
+create policy "Users can manage their own safe people"
+  on public.safe_people
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Add onboarding_done column to profiles if not exists
+alter table public.profiles
+  add column if not exists onboarding_done boolean default false;
+
 -- Run this in your Supabase SQL editor to set up all tables.
 -- All tables have Row Level Security (RLS) enabled.
 -- Users can only access their own data.
