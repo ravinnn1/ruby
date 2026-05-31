@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Search, Edit2, Trash2, X, Lock } from 'lucide-react'
+import { Search, Edit2, Trash2, Lock } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabaseClient'
 import type { JournalEntry } from '../lib/types'
-import { RubyCard } from '../components/ui/RubyCard'
-import { SoftButton } from '../components/ui/SoftButton'
 import { MoodPill } from '../components/ui/MoodPill'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
@@ -14,18 +12,21 @@ import { formatDateTime } from '../lib/dateUtils'
 import toast from 'react-hot-toast'
 
 const promptCategories = [
-  { id: 'get-it-out', label: 'Get it out', emoji: '💭' },
+  { id: 'get-it-out',      label: 'Get it out',                    emoji: '💭' },
   { id: 'wish-understood', label: 'What I wish someone understood', emoji: '🤍' },
-  { id: 'need-now', label: 'What I need right now', emoji: '🌿' },
-  { id: 'hurt-today', label: 'What hurt me today', emoji: '🌧' },
-  { id: 'survived', label: 'What I survived', emoji: '💪' },
-  { id: 'proud-of', label: 'What I\'m proud of', emoji: '💎' },
-  { id: 'let-go', label: 'What I want to let go of', emoji: '🍃' },
-  { id: 'unsent-letter', label: 'A letter I won\'t send', emoji: '✉️' },
-  { id: 'softer', label: 'Things that made today softer', emoji: '🌸' },
+  { id: 'need-now',        label: 'What I need right now',          emoji: '🌿' },
+  { id: 'hurt-today',      label: 'What hurt today',               emoji: '🌧' },
+  { id: 'survived',        label: 'What I survived',               emoji: '💪' },
+  { id: 'proud-of',        label: 'What I\'m proud of',            emoji: '💎' },
+  { id: 'let-go',          label: 'What I can release tonight',    emoji: '🍃' },
+  { id: 'unsent-letter',   label: 'A letter I won\'t send',        emoji: '✉️' },
+  { id: 'need-to-hear',    label: 'What I need to hear',           emoji: '🌸' },
+  { id: 'truth',           label: 'The truth without making it pretty', emoji: '🪞' },
 ]
 
-const moods = ['calm', 'anxious', 'sad', 'angry', 'overwhelmed', 'numb', 'hopeful', 'happy', 'tired', 'proud']
+const moods = ['calm','anxious','sad','angry','overwhelmed','numb','hopeful','happy','tired','proud']
+
+const ts = { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' }
 
 export function Journal() {
   const { user } = useAuth()
@@ -38,6 +39,8 @@ export function Journal() {
   const [search, setSearch] = useState('')
   const [filterMood, setFilterMood] = useState<string | null>(null)
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
+  const [viewingEntry, setViewingEntry] = useState<JournalEntry | null>(null)
+  const [justSaved, setJustSaved] = useState(false)
 
   // Editor state
   const [title, setTitle] = useState('')
@@ -46,305 +49,375 @@ export function Journal() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    if (user) loadEntries()
-  }, [user])
+  useEffect(() => { if (user) loadEntries() }, [user])
 
   const loadEntries = async () => {
     if (!user) return
     setLoading(true)
     const { data } = await supabase
-      .from('journal_entries')
-      .select('*')
-      .eq('user_id', user.id)
+      .from('journal_entries').select('*').eq('user_id', user.id)
       .order('created_at', { ascending: false })
     setEntries(data || [])
     setLoading(false)
   }
 
-  const openEditor = (entry?: JournalEntry) => {
-    if (entry) {
-      setEditingEntry(entry)
-      setTitle(entry.title || '')
-      setBody(entry.body)
-      setSelectedMood(entry.mood)
-      setSelectedCategory(entry.prompt_category)
-    } else {
-      setEditingEntry(null)
-      setTitle('')
-      setBody('')
-      setSelectedMood(null)
-      setSelectedCategory(null)
-    }
+  const openNew = (category?: string) => {
+    setEditingEntry(null)
+    setTitle('')
+    setBody('')
+    setSelectedMood(null)
+    setSelectedCategory(category || null)
+    setJustSaved(false)
     setShowEditor(true)
   }
 
-  const closeEditor = () => {
-    setShowEditor(false)
-    setEditingEntry(null)
+  const openEdit = (entry: JournalEntry) => {
+    setEditingEntry(entry)
+    setTitle(entry.title || '')
+    setBody(entry.body || '')
+    setSelectedMood(entry.mood || null)
+    setSelectedCategory(entry.prompt_category || null)
+    setJustSaved(false)
+    setShowEditor(true)
   }
 
-  const handleSave = async () => {
+  const saveEntry = async () => {
     if (!user || !body.trim()) return
     setSaving(true)
-
     const payload = {
       user_id: user.id,
       title: title.trim() || null,
       body: body.trim(),
       mood: selectedMood,
       prompt_category: selectedCategory,
+      updated_at: new Date().toISOString(),
     }
-
-    let error
     if (editingEntry) {
-      const res = await supabase.from('journal_entries').update(payload).eq('id', editingEntry.id)
-      error = res.error
+      await supabase.from('journal_entries').update(payload).eq('id', editingEntry.id)
     } else {
-      const res = await supabase.from('journal_entries').insert(payload)
-      error = res.error
+      await supabase.from('journal_entries').insert({ ...payload, created_at: new Date().toISOString() })
     }
-
     setSaving(false)
-    if (!error) {
-      toast.success(editingEntry ? 'Entry updated. 🌸' : 'Entry saved. Nothing has to be perfect to be worth saving. 💎', {
-        style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
-      })
-      closeEditor()
-      loadEntries()
-    }
+    setJustSaved(true)
+    await loadEntries()
+    setTimeout(() => { setShowEditor(false); setJustSaved(false) }, 1800)
   }
 
-  const handleDelete = async () => {
+  const deleteEntry = async () => {
     if (!deleteTarget) return
     setDeleting(true)
-    const { error } = await supabase.from('journal_entries').delete().eq('id', deleteTarget)
+    await supabase.from('journal_entries').delete().eq('id', deleteTarget)
     setDeleting(false)
     setDeleteTarget(null)
-    if (!error) {
-      toast.success('Entry removed.', {
-        style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
-      })
-      loadEntries()
-    }
+    await loadEntries()
+    toast.success('Entry removed.', { style: ts })
   }
 
-  const filteredEntries = entries.filter(e => {
-    const matchSearch = !search || e.body.toLowerCase().includes(search.toLowerCase()) || (e.title || '').toLowerCase().includes(search.toLowerCase())
+  const filtered = entries.filter(e => {
+    const matchSearch = !search || (e.body || '').toLowerCase().includes(search.toLowerCase()) || (e.title || '').toLowerCase().includes(search.toLowerCase())
     const matchMood = !filterMood || e.mood === filterMood
-    const matchCategory = !filterCategory || e.prompt_category === filterCategory
-    return matchSearch && matchMood && matchCategory
+    const matchCat = !filterCategory || e.prompt_category === filterCategory
+    return matchSearch && matchMood && matchCat
   })
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="flex items-start justify-between">
         <div>
-          <h1 className="font-display text-2xl text-[#3A2A2F]">📖 Journal</h1>
-          <p className="text-[#7A6670] text-sm mt-0.5">Your private space to write it all out.</p>
+          <h1 className="font-display text-2xl text-[#3A2A2F] flex items-center gap-2">
+            <Lock size={18} className="text-[#C94C63]" /> Private Journal
+          </h1>
+          <p className="text-[#7A6670] text-sm mt-0.5">This space is only yours.</p>
         </div>
-        <SoftButton variant="ruby" size="sm" onClick={() => openEditor()}>
-          <Plus size={16} />
-          Write
-        </SoftButton>
-      </div>
+      </motion.div>
 
-      {/* Search & filters */}
-      <div className="space-y-2">
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B8A0A8]" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search your entries…"
-            className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white/70 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm focus:outline-none focus:border-[#C94C63] transition-all"
-          />
-        </div>
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {moods.map(m => (
+      {/* Prompt cards */}
+      {!showEditor && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <p className="text-xs text-[#7A6670] mb-2 font-medium tracking-wide uppercase">Start with a prompt</p>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {promptCategories.map(p => (
+              <button
+                key={p.id}
+                onClick={() => openNew(p.id)}
+                className="flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-2xl text-center transition-all hover:scale-105 active:scale-95"
+                style={{
+                  background: 'rgba(255,255,255,0.75)',
+                  border: '1.5px solid rgba(248,200,220,0.5)',
+                  minWidth: 100,
+                  boxShadow: '0 2px 8px rgba(155,17,30,0.06)',
+                }}
+              >
+                <span className="text-xl">{p.emoji}</span>
+                <span className="text-[10px] text-[#7A6670] leading-tight font-medium">{p.label}</span>
+              </button>
+            ))}
             <button
-              key={m}
-              onClick={() => setFilterMood(filterMood === m ? null : m)}
-              className={`px-3 py-1 rounded-full text-xs capitalize whitespace-nowrap transition-all ${
-                filterMood === m ? 'bg-[#C94C63] text-white' : 'bg-white/60 border border-[#F8C8DC] text-[#7A6670]'
-              }`}
+              onClick={() => openNew()}
+              className="flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-2xl text-center transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #9B111E, #C94C63)',
+                minWidth: 80,
+                boxShadow: '0 4px 16px rgba(155,17,30,0.3)',
+              }}
             >
-              {m}
+              <span className="text-xl">✏️</span>
+              <span className="text-[10px] text-white leading-tight font-medium">Free write</span>
             </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Entries */}
-      {loading ? (
-        <LoadingState variant="skeleton" />
-      ) : filteredEntries.length === 0 ? (
-        <EmptyState
-          icon="📖"
-          title="Nothing here yet."
-          message="This space is ready whenever you are. Nothing has to be perfect to be worth saving."
-          action={<SoftButton variant="ruby" size="sm" onClick={() => openEditor()}>Write your first entry</SoftButton>}
-        />
-      ) : (
-        <div className="space-y-3">
-          {filteredEntries.map((entry, i) => (
-            <motion.div
-              key={entry.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-            >
-              <RubyCard variant="default" className="group">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <Lock size={12} className="text-[#C94C63]/50 shrink-0" />
-                      {entry.title && (
-                        <h3 className="font-display text-sm text-[#3A2A2F] truncate">{entry.title}</h3>
-                      )}
-                      {entry.mood && <MoodPill mood={entry.mood} size="sm" />}
-                      {entry.prompt_category && (
-                        <span className="text-xs text-[#7A6670] bg-[#F8C8DC]/40 px-2 py-0.5 rounded-full">
-                          {promptCategories.find(p => p.id === entry.prompt_category)?.label || entry.prompt_category}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[#7A6670] text-sm line-clamp-3 leading-relaxed">{entry.body}</p>
-                    <p className="text-[#B8A0A8] text-xs mt-2">{formatDateTime(entry.created_at)}</p>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      onClick={() => openEditor(entry)}
-                      className="p-1.5 rounded-xl text-[#7A6670] hover:bg-[#F8C8DC]/40 hover:text-[#C94C63] transition-colors"
-                      aria-label="Edit entry"
-                    >
-                      <Edit2 size={14} />
-                    </button>
-                    <button
-                      onClick={() => setDeleteTarget(entry.id)}
-                      className="p-1.5 rounded-xl text-[#7A6670] hover:bg-[#F8C8DC]/40 hover:text-[#9B111E] transition-colors"
-                      aria-label="Delete entry"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
-                </div>
-              </RubyCard>
-            </motion.div>
-          ))}
-        </div>
+          </div>
+        </motion.div>
       )}
 
-      {/* Editor overlay */}
+      {/* Editor */}
       <AnimatePresence>
         {showEditor && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-[#FFF7EF] flex flex-col"
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12, scale: 0.97 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-3xl p-5"
+            style={{
+              background: 'rgba(255,255,255,0.88)',
+              border: '1.5px solid rgba(248,200,220,0.5)',
+              boxShadow: '0 8px 40px rgba(155,17,30,0.1)',
+            }}
           >
-            {/* Editor header */}
-            <div className="flex items-center justify-between px-4 py-4 border-b border-[#F8C8DC]/50">
-              <h2 className="font-display text-lg text-[#3A2A2F]">
-                {editingEntry ? 'Edit entry' : 'New entry'}
-              </h2>
+            {/* Category selector */}
+            <div className="flex gap-1.5 flex-wrap mb-4">
+              {promptCategories.map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setSelectedCategory(p.id)}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-medium transition-all"
+                  style={{
+                    background: selectedCategory === p.id ? '#C94C63' : 'rgba(248,200,220,0.25)',
+                    color: selectedCategory === p.id ? 'white' : '#7A6670',
+                    border: `1px solid ${selectedCategory === p.id ? '#C94C63' : 'rgba(248,200,220,0.5)'}`,
+                  }}
+                >
+                  {p.emoji} {p.label}
+                </button>
+              ))}
+            </div>
+
+            <input
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder="Title (optional)"
+              className="w-full px-0 py-1 bg-transparent border-b border-[#F8C8DC] text-[#3A2A2F] font-display text-lg placeholder-[#B8A0A8] focus:outline-none focus:border-[#C94C63] transition-all mb-3"
+            />
+
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              placeholder="Write freely. Nothing has to be perfect to be worth saving."
+              rows={8}
+              className="w-full px-0 py-2 bg-transparent text-[#3A2A2F] placeholder-[#B8A0A8] text-sm leading-relaxed resize-none focus:outline-none"
+              style={{ fontFamily: 'Georgia, serif', lineHeight: 1.8 }}
+            />
+
+            {/* Mood */}
+            <div className="flex gap-1.5 flex-wrap mt-3 mb-4">
+              {moods.map(m => (
+                <button
+                  key={m}
+                  onClick={() => setSelectedMood(m)}
+                  className="px-2.5 py-1 rounded-full text-xs transition-all"
+                  style={{
+                    background: selectedMood === m ? '#9B111E' : 'rgba(248,200,220,0.2)',
+                    color: selectedMood === m ? 'white' : '#7A6670',
+                    border: `1px solid ${selectedMood === m ? '#9B111E' : 'rgba(248,200,220,0.4)'}`,
+                  }}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence>
+              {justSaved && (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="mb-3 px-4 py-2.5 rounded-2xl text-sm text-[#6F8F5F] text-center"
+                  style={{ background: 'rgba(168,198,134,0.2)', border: '1px solid rgba(168,198,134,0.4)' }}
+                >
+                  🌿 Saved. You got it out, and that matters.
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="flex gap-2">
               <button
-                onClick={closeEditor}
-                className="p-2 rounded-xl text-[#7A6670] hover:bg-[#F8C8DC]/40 transition-colors"
-                aria-label="Close editor"
+                onClick={saveEntry}
+                disabled={!body.trim() || saving}
+                className="flex-1 py-3 rounded-2xl text-white text-sm font-medium disabled:opacity-40 transition-all"
+                style={{ background: 'linear-gradient(135deg, #9B111E, #C94C63)' }}
               >
-                <X size={18} />
+                {saving ? 'Saving…' : editingEntry ? 'Update entry' : 'Save entry 💎'}
               </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              {/* Prompt categories */}
-              <div>
-                <p className="text-[#7A6670] text-xs mb-2">Choose a prompt (optional)</p>
-                <div className="flex gap-1.5 overflow-x-auto pb-1">
-                  {promptCategories.map(cat => (
-                    <button
-                      key={cat.id}
-                      onClick={() => setSelectedCategory(selectedCategory === cat.id ? null : cat.id)}
-                      className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${
-                        selectedCategory === cat.id
-                          ? 'bg-[#C94C63] text-white'
-                          : 'bg-white/70 border border-[#F8C8DC] text-[#7A6670]'
-                      }`}
-                    >
-                      <span>{cat.emoji}</span>
-                      <span>{cat.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Title */}
-              <input
-                type="text"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                placeholder="Title (optional)"
-                className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm focus:outline-none focus:border-[#C94C63] transition-all"
-              />
-
-              {/* Body */}
-              <textarea
-                value={body}
-                onChange={e => setBody(e.target.value)}
-                placeholder="Write whatever needs to come out. This is just for you."
-                rows={12}
-                autoFocus
-                className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm resize-none focus:outline-none focus:border-[#C94C63] transition-all leading-relaxed"
-              />
-
-              {/* Mood */}
-              <div>
-                <p className="text-[#7A6670] text-xs mb-2">How are you feeling? (optional)</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {moods.map(m => (
-                    <button
-                      key={m}
-                      onClick={() => setSelectedMood(selectedMood === m ? null : m)}
-                      className={`px-3 py-1 rounded-full text-xs capitalize transition-all ${
-                        selectedMood === m ? 'bg-[#C94C63] text-white' : 'bg-white/70 border border-[#F8C8DC] text-[#7A6670]'
-                      }`}
-                    >
-                      {m}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Save button */}
-            <div className="px-4 py-4 border-t border-[#F8C8DC]/50">
-              <SoftButton
-                variant="ruby"
-                size="lg"
-                onClick={handleSave}
-                loading={saving}
-                disabled={!body.trim()}
-                className="w-full"
+              <button
+                onClick={() => setShowEditor(false)}
+                className="px-4 py-3 rounded-2xl text-sm text-[#7A6670] transition-all hover:bg-[#F8C8DC]/30"
               >
-                {editingEntry ? 'Save changes' : 'Save entry 💎'}
-              </SoftButton>
+                Cancel
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Delete confirm */}
+      {/* Search & filters */}
+      {!showEditor && (
+        <div className="space-y-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#B8A0A8]" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search your entries…"
+              className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white/70 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm focus:outline-none focus:border-[#C94C63] transition-all"
+            />
+          </div>
+          <div className="flex gap-1.5 flex-wrap">
+            {moods.map(m => (
+              <button
+                key={m}
+                onClick={() => setFilterMood(filterMood === m ? null : m)}
+                className="px-2.5 py-1 rounded-full text-xs transition-all"
+                style={{
+                  background: filterMood === m ? '#9B111E' : 'rgba(248,200,220,0.2)',
+                  color: filterMood === m ? 'white' : '#7A6670',
+                  border: `1px solid ${filterMood === m ? '#9B111E' : 'rgba(248,200,220,0.3)'}`,
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Entries list */}
+      {!showEditor && (
+        loading ? <LoadingState /> :
+        filtered.length === 0 ? (
+          <EmptyState
+            icon="📖"
+            title="Nothing here yet."
+            message="This space is ready whenever you are."
+          />
+        ) : (
+          <div className="space-y-3">
+            {filtered.map((entry, i) => (
+              <motion.div
+                key={entry.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="jewel-card p-4 cursor-pointer"
+                onClick={() => setViewingEntry(entry)}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Lock size={11} className="text-[#C94C63] shrink-0" />
+                      {entry.prompt_category && (
+                        <span className="text-[10px] text-[#B76E79] font-medium">
+                          {promptCategories.find(p => p.id === entry.prompt_category)?.emoji}{' '}
+                          {promptCategories.find(p => p.id === entry.prompt_category)?.label}
+                        </span>
+                      )}
+                    </div>
+                    {entry.title && (
+                      <p className="font-display text-sm text-[#3A2A2F] mb-1 truncate">{entry.title}</p>
+                    )}
+                    <p className="text-xs text-[#7A6670] leading-relaxed line-clamp-2">{entry.body}</p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] text-[#B8A0A8]">{formatDateTime(entry.created_at)}</span>
+                      {entry.mood && <MoodPill mood={entry.mood} size="sm" />}
+                    </div>
+                  </div>
+                  <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                    <button
+                      onClick={() => openEdit(entry)}
+                      className="p-1.5 rounded-xl text-[#B8A0A8] hover:text-[#C94C63] hover:bg-[#F8C8DC]/30 transition-all"
+                    >
+                      <Edit2 size={13} />
+                    </button>
+                    <button
+                      onClick={() => setDeleteTarget(entry.id)}
+                      className="p-1.5 rounded-xl text-[#B8A0A8] hover:text-[#9B111E] hover:bg-[#F8C8DC]/30 transition-all"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* View entry modal */}
+      <AnimatePresence>
+        {viewingEntry && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(58,42,47,0.5)', backdropFilter: 'blur(8px)' }}
+            onClick={() => setViewingEntry(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="w-full max-w-lg rounded-3xl p-6 max-h-[80vh] overflow-y-auto"
+              style={{ background: '#FFF7EF', boxShadow: '0 20px 60px rgba(155,17,30,0.2)' }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-2 mb-4">
+                <Lock size={14} className="text-[#C94C63]" />
+                <span className="text-xs text-[#B76E79]">Private entry</span>
+                <span className="ml-auto text-xs text-[#B8A0A8]">{formatDateTime(viewingEntry.created_at)}</span>
+              </div>
+              {viewingEntry.title && (
+                <h2 className="font-display text-xl text-[#3A2A2F] mb-3">{viewingEntry.title}</h2>
+              )}
+              <p className="text-sm text-[#3A2A2F] leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'Georgia, serif', lineHeight: 1.9 }}>
+                {viewingEntry.body}
+              </p>
+              {viewingEntry.mood && (
+                <div className="mt-4">
+                  <MoodPill mood={viewingEntry.mood} size="sm" />
+                </div>
+              )}
+              <button
+                onClick={() => setViewingEntry(null)}
+                className="mt-5 w-full py-2.5 rounded-2xl text-sm text-[#7A6670] transition-all hover:bg-[#F8C8DC]/30"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <ConfirmModal
         isOpen={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Remove this entry?"
-        message="This will permanently delete this journal entry. Are you sure?"
+        onConfirm={deleteEntry}
         loading={deleting}
+        title="Delete this entry?"
+        message="This entry will be gone. Are you sure?"
+        confirmLabel="Yes, delete"
       />
     </div>
   )

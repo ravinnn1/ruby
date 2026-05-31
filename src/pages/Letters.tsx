@@ -1,24 +1,23 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Lock, Unlock, Edit2, Trash2, X } from 'lucide-react'
+import { Edit2, Trash2 } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabaseClient'
 import type { Letter } from '../lib/types'
-import { RubyCard } from '../components/ui/RubyCard'
-import { SoftButton } from '../components/ui/SoftButton'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
-import { GentleModal, ConfirmModal } from '../components/ui/GentleModal'
-import { formatDate, formatDateTime } from '../lib/dateUtils'
+import { ConfirmModal } from '../components/ui/GentleModal'
+import { formatDate } from '../lib/dateUtils'
 import toast from 'react-hot-toast'
 
 const letterTypes = [
-  { id: 'future', label: 'Letter to future Ruby', emoji: '🌟' },
-  { id: 'anxious', label: 'For when I feel anxious', emoji: '🌀' },
-  { id: 'alone', label: 'For when I feel alone', emoji: '🌙' },
-  { id: 'confidence', label: 'For when I need confidence', emoji: '💎' },
-  { id: 'unsent', label: 'A letter I\'ll never send', emoji: '✉️' },
-  { id: 'custom', label: 'Custom letter', emoji: '📝' },
+  { id: 'future',     label: 'Future Ruby',          emoji: '🌟', color: '#C94C63' },
+  { id: 'anxious',    label: 'When I feel anxious',   emoji: '🌀', color: '#E8A3B8' },
+  { id: 'alone',      label: 'When I feel alone',     emoji: '🌙', color: '#7A6670' },
+  { id: 'confidence', label: 'When I need confidence',emoji: '💎', color: '#9B111E' },
+  { id: 'need-hear',  label: 'What I need to hear',   emoji: '🌸', color: '#B76E79' },
+  { id: 'unsent',     label: 'Letter I\'ll never send',emoji: '✉️', color: '#6F8F5F' },
+  { id: 'custom',     label: 'Custom',                emoji: '📝', color: '#B8A0A8' },
 ]
 
 const templates: Record<string, string> = {
@@ -26,8 +25,11 @@ const templates: Record<string, string> = {
   anxious: 'Dear Ruby,\n\nIf you\'re reading this, you\'re feeling anxious right now. That\'s okay. You\'ve felt this before and you got through it.\n\nRemember: this feeling is temporary. You are safe. Take one breath.\n\nThings that help you: ...\n\nYou are going to be okay.',
   alone: 'Dear Ruby,\n\nYou are not as alone as you feel right now. There are people who love you, even when it doesn\'t feel that way.\n\nSome of those people: ...\n\nYou matter. You are seen. You are loved.',
   confidence: 'Dear Ruby,\n\nYou are more capable than you give yourself credit for. Look at everything you\'ve already done...\n\nYou are allowed to take up space. You are allowed to be proud of yourself.',
+  'need-hear': 'Dear Ruby,\n\nHere is what you need to hear right now:\n\nYou are doing your best. That is enough.\n\nYou don\'t have to be okay all the time.\n\nYou are loved exactly as you are.',
   unsent: 'This is a letter I\'ll never send, but I need to write it...',
 }
+
+const ts = { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' }
 
 export function Letters() {
   const { user } = useAuth()
@@ -38,6 +40,7 @@ export function Letters() {
   const [viewingLetter, setViewingLetter] = useState<Letter | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [openingId, setOpeningId] = useState<string | null>(null)
 
   const [formTitle, setFormTitle] = useState('')
   const [formBody, setFormBody] = useState('')
@@ -56,11 +59,12 @@ export function Letters() {
     setLoading(false)
   }
 
-  const openNew = () => {
+  const openNew = (type?: string) => {
     setEditingLetter(null)
+    const t = type || 'future'
+    setFormType(t)
     setFormTitle('')
-    setFormBody(templates['future'])
-    setFormType('future')
+    setFormBody(templates[t] || '')
     setFormUnlockDate('')
     setFormLocked(false)
     setShowEditor(true)
@@ -68,158 +72,301 @@ export function Letters() {
 
   const openEdit = (letter: Letter) => {
     setEditingLetter(letter)
-    setFormTitle(letter.title)
+    setFormTitle(letter.title || '')
     setFormBody(letter.body || '')
-    setFormType(letter.letter_type)
+    setFormType(letter.letter_type || 'custom')
     setFormUnlockDate(letter.unlock_date || '')
-    setFormLocked(letter.is_locked)
+    setFormLocked(letter.is_locked || false)
     setShowEditor(true)
   }
 
-  const handleTypeChange = (type: string) => {
-    setFormType(type)
-    if (!editingLetter && templates[type]) setFormBody(templates[type])
+  const openLetter = (letter: Letter) => {
+    setOpeningId(letter.id)
+    setTimeout(() => {
+      setOpeningId(null)
+      setViewingLetter(letter)
+    }, 600)
   }
 
-  const handleSave = async () => {
-    if (!user || !formTitle.trim()) return
+  const saveLetter = async () => {
+    if (!user || !formBody.trim()) return
     setSaving(true)
     const payload = {
       user_id: user.id,
-      title: formTitle.trim(),
-      body: formBody.trim() || null,
-      letter_type: formType as Letter['letter_type'],
+      title: formTitle.trim() || null,
+      body: formBody.trim(),
+      letter_type: formType,
       unlock_date: formUnlockDate || null,
       is_locked: formLocked,
+      updated_at: new Date().toISOString(),
     }
-    let error
     if (editingLetter) {
-      const res = await supabase.from('letters').update(payload).eq('id', editingLetter.id)
-      error = res.error
+      await supabase.from('letters').update(payload).eq('id', editingLetter.id)
     } else {
-      const res = await supabase.from('letters').insert(payload)
-      error = res.error
+      await supabase.from('letters').insert({ ...payload, created_at: new Date().toISOString() })
     }
     setSaving(false)
-    if (!error) {
-      toast.success('Letter saved. ✉️', { style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' } })
-      setShowEditor(false)
-      loadLetters()
-    }
+    setShowEditor(false)
+    await loadLetters()
+    toast.success('Letter sealed. 💌', { style: ts })
   }
 
-  const handleDelete = async () => {
+  const deleteLetter = async () => {
     if (!deleteTarget) return
     setDeleting(true)
     await supabase.from('letters').delete().eq('id', deleteTarget)
     setDeleting(false)
     setDeleteTarget(null)
-    loadLetters()
+    await loadLetters()
+    toast.success('Letter removed.', { style: ts })
   }
 
-  const canOpen = (letter: Letter) => {
-    if (!letter.is_locked) return true
-    if (!letter.unlock_date) return true
-    return new Date() >= new Date(letter.unlock_date)
+  const isLocked = (letter: Letter) => {
+    if (!letter.is_locked) return false
+    if (letter.unlock_date) {
+      return new Date(letter.unlock_date) > new Date()
+    }
+    return true
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-2xl text-[#3A2A2F]">✉️ Letters</h1>
-          <p className="text-[#7A6670] text-sm mt-0.5">Private letters, sealed with care.</p>
-        </div>
-        <SoftButton variant="ruby" size="sm" onClick={openNew}><Plus size={16} /> Write</SoftButton>
-      </div>
+    <div className="space-y-6">
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <h1 className="font-display text-2xl text-[#3A2A2F]">💌 Letters</h1>
+        <p className="text-[#7A6670] text-sm mt-0.5">Private letters, sealed just for you.</p>
+      </motion.div>
 
-      {loading ? <LoadingState variant="skeleton" /> : letters.length === 0 ? (
-        <EmptyState icon="✉️" title="No letters yet." message="Write a letter to your future self, or for a moment when you need it most." action={<SoftButton variant="ruby" size="sm" onClick={openNew}>Write your first letter</SoftButton>} />
-      ) : (
-        <div className="space-y-3">
-          {letters.map((letter, i) => {
-            const typeInfo = letterTypes.find(t => t.id === letter.letter_type)
-            const locked = letter.is_locked && letter.unlock_date && new Date() < new Date(letter.unlock_date)
-            return (
-              <motion.div key={letter.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
-                <RubyCard variant={locked ? 'ruby' : 'gem'} className="group cursor-pointer" onClick={() => canOpen(letter) ? setViewingLetter(letter) : null}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span>{typeInfo?.emoji || '✉️'}</span>
-                        {locked ? <Lock size={12} className="text-[#C94C63]" /> : <Unlock size={12} className="text-[#A8C686]" />}
-                        <span className="text-xs text-[#7A6670] bg-[#F8C8DC]/40 px-2 py-0.5 rounded-full">{typeInfo?.label || letter.letter_type}</span>
-                      </div>
-                      <h3 className="font-display text-sm text-[#3A2A2F]">{letter.title}</h3>
-                      {locked && letter.unlock_date && (
-                        <p className="text-[#C94C63] text-xs mt-1">Opens {formatDate(letter.unlock_date)}</p>
-                      )}
-                      {!locked && letter.body && (
-                        <p className="text-[#7A6670] text-xs mt-1 line-clamp-2">{letter.body}</p>
-                      )}
-                      <p className="text-[#B8A0A8] text-xs mt-1">{formatDateTime(letter.created_at)}</p>
-                    </div>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={e => { e.stopPropagation(); openEdit(letter) }} className="p-1.5 rounded-xl text-[#7A6670] hover:text-[#C94C63] transition-colors"><Edit2 size={13} /></button>
-                      <button onClick={e => { e.stopPropagation(); setDeleteTarget(letter.id) }} className="p-1.5 rounded-xl text-[#7A6670] hover:text-[#9B111E] transition-colors"><Trash2 size={13} /></button>
-                    </div>
-                  </div>
-                </RubyCard>
-              </motion.div>
-            )
-          })}
+      {/* Letter type cards */}
+      {!showEditor && (
+        <div className="grid grid-cols-2 gap-2">
+          {letterTypes.map((t, i) => (
+            <motion.button
+              key={t.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              whileHover={{ scale: 1.03, y: -2 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => openNew(t.id)}
+              className="flex items-center gap-3 p-3 rounded-2xl text-left transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.75)',
+                border: `1.5px solid ${t.color}30`,
+                boxShadow: '0 2px 8px rgba(155,17,30,0.05)',
+              }}
+            >
+              <span className="text-2xl">{t.emoji}</span>
+              <span className="text-xs font-medium text-[#3A2A2F] leading-tight">{t.label}</span>
+            </motion.button>
+          ))}
         </div>
       )}
 
       {/* Editor */}
       <AnimatePresence>
         {showEditor && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 bg-[#FFF7EF] flex flex-col">
-            <div className="flex items-center justify-between px-4 py-4 border-b border-[#F8C8DC]/50">
-              <h2 className="font-display text-lg text-[#3A2A2F]">{editingLetter ? 'Edit letter' : 'New letter'}</h2>
-              <button onClick={() => setShowEditor(false)} className="p-2 rounded-xl text-[#7A6670] hover:bg-[#F8C8DC]/40 transition-colors"><X size={18} /></button>
+          <motion.div
+            initial={{ opacity: 0, y: 16, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.3 }}
+            className="rounded-3xl p-5"
+            style={{
+              background: 'rgba(255,255,255,0.9)',
+              border: '1.5px solid rgba(248,200,220,0.5)',
+              boxShadow: '0 8px 40px rgba(155,17,30,0.1)',
+            }}
+          >
+            <div className="flex gap-1.5 flex-wrap mb-4">
+              {letterTypes.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => { setFormType(t.id); if (!formBody || formBody === templates[formType]) setFormBody(templates[t.id] || '') }}
+                  className="px-2.5 py-1 rounded-full text-[10px] font-medium transition-all"
+                  style={{
+                    background: formType === t.id ? t.color : 'rgba(248,200,220,0.2)',
+                    color: formType === t.id ? 'white' : '#7A6670',
+                    border: `1px solid ${formType === t.id ? t.color : 'rgba(248,200,220,0.4)'}`,
+                  }}
+                >
+                  {t.emoji} {t.label}
+                </button>
+              ))}
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
-              <div className="flex gap-1.5 overflow-x-auto pb-1">
-                {letterTypes.map(t => (
-                  <button key={t.id} onClick={() => handleTypeChange(t.id)} className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${formType === t.id ? 'bg-[#C94C63] text-white' : 'bg-white/70 border border-[#F8C8DC] text-[#7A6670]'}`}>
-                    <span>{t.emoji}</span><span>{t.label}</span>
-                  </button>
-                ))}
-              </div>
-              <input type="text" value={formTitle} onChange={e => setFormTitle(e.target.value)} placeholder="Letter title" className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm focus:outline-none focus:border-[#C94C63] transition-all" />
-              <textarea value={formBody} onChange={e => setFormBody(e.target.value)} placeholder="Write your letter…" rows={14} className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm resize-none focus:outline-none focus:border-[#C94C63] transition-all leading-relaxed" />
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={formLocked} onChange={e => setFormLocked(e.target.checked)} className="rounded" />
-                  <span className="text-sm text-[#7A6670]">Lock this letter</span>
-                </label>
-                {formLocked && (
-                  <input type="date" value={formUnlockDate} onChange={e => setFormUnlockDate(e.target.value)} placeholder="Unlock date" className="flex-1 px-3 py-2 rounded-xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] text-sm focus:outline-none focus:border-[#C94C63] transition-all" />
-                )}
-              </div>
+
+            <input
+              type="text"
+              value={formTitle}
+              onChange={e => setFormTitle(e.target.value)}
+              placeholder="Title (optional)"
+              className="w-full px-0 py-1 bg-transparent border-b border-[#F8C8DC] text-[#3A2A2F] font-display text-lg placeholder-[#B8A0A8] focus:outline-none focus:border-[#C94C63] transition-all mb-3"
+            />
+
+            <textarea
+              value={formBody}
+              onChange={e => setFormBody(e.target.value)}
+              rows={10}
+              className="w-full px-0 py-2 bg-transparent text-[#3A2A2F] placeholder-[#B8A0A8] text-sm leading-relaxed resize-none focus:outline-none"
+              style={{ fontFamily: 'Georgia, serif', lineHeight: 1.9 }}
+            />
+
+            <div className="flex items-center gap-3 mt-3 mb-4">
+              <label className="flex items-center gap-2 text-xs text-[#7A6670] cursor-pointer">
+                <input type="checkbox" checked={formLocked} onChange={e => setFormLocked(e.target.checked)} className="accent-[#C94C63]" />
+                Seal this letter
+              </label>
+              {formLocked && (
+                <input
+                  type="date"
+                  value={formUnlockDate}
+                  onChange={e => setFormUnlockDate(e.target.value)}
+                  className="flex-1 px-3 py-1.5 rounded-xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] text-xs focus:outline-none focus:border-[#C94C63]"
+                  placeholder="Unlock date (optional)"
+                />
+              )}
             </div>
-            <div className="px-4 py-4 border-t border-[#F8C8DC]/50">
-              <SoftButton variant="ruby" size="lg" onClick={handleSave} loading={saving} disabled={!formTitle.trim()} className="w-full">Save letter ✉️</SoftButton>
+
+            <div className="flex gap-2">
+              <button
+                onClick={saveLetter}
+                disabled={!formBody.trim() || saving}
+                className="flex-1 py-3 rounded-2xl text-white text-sm font-medium disabled:opacity-40"
+                style={{ background: 'linear-gradient(135deg, #9B111E, #C94C63)' }}
+              >
+                {saving ? 'Sealing…' : formLocked ? 'Seal letter 💌' : 'Save letter'}
+              </button>
+              <button
+                onClick={() => setShowEditor(false)}
+                className="px-4 py-3 rounded-2xl text-sm text-[#7A6670] hover:bg-[#F8C8DC]/30 transition-all"
+              >
+                Cancel
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* View letter */}
-      <GentleModal isOpen={!!viewingLetter} onClose={() => setViewingLetter(null)} title={viewingLetter?.title || ''} size="lg">
-        {viewingLetter && (
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <span>{letterTypes.find(t => t.id === viewingLetter.letter_type)?.emoji}</span>
-              <span className="text-xs text-[#7A6670]">{formatDateTime(viewingLetter.created_at)}</span>
-            </div>
-            <div className="whitespace-pre-wrap text-[#3A2A2F] text-sm leading-relaxed font-body">{viewingLetter.body}</div>
+      {/* Letters list */}
+      {!showEditor && (
+        loading ? <LoadingState /> :
+        letters.length === 0 ? (
+          <EmptyState icon="💌" title="No letters yet." message="Write one for future Ruby, or for a hard moment." />
+        ) : (
+          <div className="space-y-3">
+            {letters.map((letter, i) => {
+              const locked = isLocked(letter)
+              const type = letterTypes.find(t => t.id === letter.letter_type)
+              return (
+                <motion.div
+                  key={letter.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className={`jewel-card p-4 cursor-pointer relative overflow-hidden ${locked ? 'envelope-sealed' : ''}`}
+                  onClick={() => !locked && openLetter(letter)}
+                  style={openingId === letter.id ? { animation: 'envelopeOpen 0.6s ease-in-out' } : {}}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-base">{type?.emoji || '💌'}</span>
+                        <span className="text-[10px] font-medium" style={{ color: type?.color || '#B76E79' }}>{type?.label}</span>
+                        {locked && <span className="text-[10px] text-[#B8A0A8] ml-auto">🔒 Sealed</span>}
+                      </div>
+                      {letter.title && (
+                        <p className="font-display text-sm text-[#3A2A2F] mb-1 truncate">{letter.title}</p>
+                      )}
+                      {!locked && (
+                        <p className="text-xs text-[#7A6670] line-clamp-2 leading-relaxed">{letter.body}</p>
+                      )}
+                      {locked && (
+                        <p className="text-xs text-[#B8A0A8] italic">
+                          {letter.unlock_date ? `Opens ${formatDate(letter.unlock_date)}` : 'Sealed until you\'re ready'}
+                        </p>
+                      )}
+                      <p className="text-[10px] text-[#B8A0A8] mt-2">{formatDate(letter.created_at)}</p>
+                    </div>
+                    {!locked && (
+                      <div className="flex gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                        <button onClick={() => openEdit(letter)} className="p-1.5 rounded-xl text-[#B8A0A8] hover:text-[#C94C63] hover:bg-[#F8C8DC]/30 transition-all">
+                          <Edit2 size={13} />
+                        </button>
+                        <button onClick={() => setDeleteTarget(letter.id)} className="p-1.5 rounded-xl text-[#B8A0A8] hover:text-[#9B111E] hover:bg-[#F8C8DC]/30 transition-all">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
-        )}
-      </GentleModal>
+        )
+      )}
 
-      <ConfirmModal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={handleDelete} title="Delete this letter?" message="This letter will be permanently deleted." loading={deleting} />
+      {/* View letter modal */}
+      <AnimatePresence>
+        {viewingLetter && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: 'rgba(58,42,47,0.55)', backdropFilter: 'blur(10px)' }}
+            onClick={() => setViewingLetter(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.88, y: 30, rotateX: 8 }}
+              animate={{ scale: 1, y: 0, rotateX: 0 }}
+              exit={{ scale: 0.92, y: 20, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+              className="w-full max-w-lg rounded-3xl p-7 max-h-[80vh] overflow-y-auto"
+              style={{
+                background: 'linear-gradient(160deg, #FFF7EF 0%, #FADADD 100%)',
+                boxShadow: '0 24px 80px rgba(155,17,30,0.25)',
+                border: '1.5px solid rgba(248,200,220,0.6)',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="text-center mb-5">
+                <span className="text-4xl">{letterTypes.find(t => t.id === viewingLetter.letter_type)?.emoji || '💌'}</span>
+                <p className="text-xs text-[#B76E79] mt-1">{letterTypes.find(t => t.id === viewingLetter.letter_type)?.label}</p>
+              </div>
+              {viewingLetter.title && (
+                <h2 className="font-display text-xl text-[#3A2A2F] mb-4 text-center">{viewingLetter.title}</h2>
+              )}
+              <p className="text-sm text-[#3A2A2F] leading-relaxed whitespace-pre-wrap" style={{ fontFamily: 'Georgia, serif', lineHeight: 2 }}>
+                {viewingLetter.body}
+              </p>
+              <div className="mt-6 pt-4 border-t border-[#F8C8DC]/50 flex gap-2">
+                <button
+                  onClick={() => { setViewingLetter(null); openEdit(viewingLetter) }}
+                  className="flex-1 py-2.5 rounded-2xl text-xs text-[#7A6670] hover:bg-[#F8C8DC]/30 transition-all"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => setViewingLetter(null)}
+                  className="flex-1 py-2.5 rounded-2xl text-white text-xs font-medium"
+                  style={{ background: 'linear-gradient(135deg, #9B111E, #C94C63)' }}
+                >
+                  Close 💌
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={deleteLetter}
+        loading={deleting}
+        title="Delete this letter?"
+        message="This letter will be gone forever."
+        confirmLabel="Yes, delete"
+      />
     </div>
   )
 }
