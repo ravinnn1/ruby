@@ -6,6 +6,7 @@ import { LoginPage } from './components/auth/LoginPage'
 import { Onboarding } from './components/auth/Onboarding'
 import { AppShell } from './components/layout/AppShell'
 import { LoadingState } from './components/ui/LoadingState'
+import { WelcomeSplash } from './components/ui/WelcomeSplash'
 import { supabase } from './lib/supabaseClient'
 
 // Pages
@@ -28,9 +29,9 @@ import { Draw } from './pages/Draw'
 import { ADHDFun } from './pages/ADHDFun'
 
 const toastStyle = {
-  background: '#FFF5EC',
-  color: '#2E1F25',
-  border: '1px solid #F2A8C8',
+  background: '#FFF7EF',
+  color: '#3A2A2F',
+  border: '1px solid #F8C8DC',
   borderRadius: '16px',
   fontSize: '14px',
   fontFamily: 'inherit',
@@ -41,8 +42,12 @@ function AppRoutes() {
   const [calmOpen, setCalmOpen] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
   const [onboardingChecked, setOnboardingChecked] = useState(false)
+  // Splash shown once per session, BEFORE login form
+  const [splashDone, setSplashDone] = useState(() => {
+    return !!sessionStorage.getItem('ruby_splash_seen')
+  })
 
-  // Check if onboarding is needed (no profile row or onboarding_done = false)
+  // Check if onboarding is needed
   useEffect(() => {
     if (!user) return
     const checkOnboarding = async () => {
@@ -51,18 +56,25 @@ function AppRoutes() {
         .select('onboarding_done')
         .eq('id', user.id)
         .single()
-      // Show onboarding if no profile or onboarding not done
-      if (!data || !data.onboarding_done) {
-        setShowOnboarding(true)
-      }
+      if (!data || !data.onboarding_done) setShowOnboarding(true)
       setOnboardingChecked(true)
     }
     checkOnboarding()
   }, [user])
 
+  // Show splash first (before login, before loading)
+  if (!splashDone) {
+    return (
+      <WelcomeSplash onDismiss={() => {
+        sessionStorage.setItem('ruby_splash_seen', '1')
+        setSplashDone(true)
+      }} />
+    )
+  }
+
   if (loading || (user && !onboardingChecked)) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF5EC' }}>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FFF7EF' }}>
         <LoadingState />
       </div>
     )
@@ -77,7 +89,6 @@ function AppRoutes() {
     )
   }
 
-  // Show onboarding overlay before app
   if (showOnboarding) {
     return <Onboarding onComplete={() => setShowOnboarding(false)} />
   }
@@ -115,10 +126,7 @@ export default function App() {
         <AppRoutes />
         <Toaster
           position="top-center"
-          toastOptions={{
-            duration: 3000,
-            style: toastStyle,
-          }}
+          toastOptions={{ duration: 3000, style: toastStyle }}
         />
       </AuthProvider>
     </BrowserRouter>

@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { BottomNav } from './BottomNav'
 import { FloatingCalmButton } from './FloatingCalmButton'
-import { WelcomeSplash } from '../ui/WelcomeSplash'
 import { CalmOverlay } from '../calm/CalmOverlay'
 import { supabaseConfigured } from '../../lib/supabaseClient'
 
@@ -25,9 +24,6 @@ export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellPr
 
   return (
     <div className="min-h-screen gradient-bg">
-      {/* Welcome splash — shown once per session */}
-      <WelcomeSplash />
-
       {/* Supabase not-configured banner */}
       {!supabaseConfigured && !bannerDismissed && (
         <div

@@ -1,146 +1,333 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronRight, Check } from 'lucide-react'
-import { BreathingOrb } from './BreathingOrb'
-import { GroundingExercise } from './GroundingExercise'
-import { supabase } from '../../lib/supabaseClient'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../lib/auth'
+import { supabase } from '../../lib/supabaseClient'
 import toast from 'react-hot-toast'
-
-type BreathingMode = 'box' | '478' | 'gentle'
-type CalmTab = 'breathe' | 'ground' | 'feel' | 'need' | 'steps' | 'aftercare'
-
-const breathingModes: { id: BreathingMode; label: string; desc: string }[] = [
-  { id: 'box',    label: 'Box breathing',    desc: 'Inhale 4 · Hold 4 · Exhale 4 · Hold 4' },
-  { id: '478',   label: '4-7-8 breathing',  desc: 'Inhale 4 · Hold 7 · Exhale 8' },
-  { id: 'gentle', label: 'Gentle breathing', desc: 'Inhale 3 · Exhale 5' },
-]
-
-const emotions = [
-  'anxious', 'overwhelmed', 'scared', 'angry', 'numb',
-  'sad', 'panicky', 'exhausted', 'unsure',
-]
-
-const needOptions = [
-  { label: 'Reassurance',    emoji: '🤗' },
-  { label: 'Quiet',          emoji: '🌙' },
-  { label: 'Distraction',    emoji: '🎈' },
-  { label: 'Grounding',      emoji: '🌿' },
-  { label: 'To cry',         emoji: '💧' },
-  { label: 'A tiny plan',    emoji: '📋' },
-  { label: 'Someone safe',   emoji: '💗' },
-]
-
-const tinySteps = [
-  'Place both feet on the floor',
-  'Unclench your jaw',
-  'Loosen your shoulders',
-  'Drink some water',
-  'Lower the lights if you can',
-  'Wrap up in something soft',
-  'Text a safe person',
-  'Breathe one more time',
-]
-
-const aftercareItems = [
-  { id: 'water',       label: 'Drink some water',          emoji: '💧' },
-  { id: 'light',       label: 'Softer lighting',           emoji: '🕯️' },
-  { id: 'blanket',     label: 'Blanket or comfort item',   emoji: '🧸' },
-  { id: 'message',     label: 'Message someone safe',      emoji: '💬' },
-  { id: 'write',       label: 'Write one sentence',        emoji: '✏️' },
-  { id: 'rest',        label: 'Rest',                      emoji: '🛏️' },
-  { id: 'environment', label: 'Change environment',        emoji: '🚶' },
-  { id: 'nothing',     label: 'Do nothing for a moment',   emoji: '🌸' },
-]
 
 interface CalmOverlayProps {
   isOpen: boolean
   onClose: () => void
 }
 
+const EMOTIONS = ['anxious','overwhelmed','scared','angry','numb','sad','panicky','exhausted','unsure']
+const NEEDS = ['reassurance','quiet','grounding','distraction','to cry','a tiny plan','someone safe']
+const TINY_STEPS = [
+  'place both feet on the floor',
+  'loosen your shoulders',
+  'lower the lights',
+  'wrap up in something soft',
+  'breathe one more time',
+  'text someone safe',
+  'write one sentence',
+  'rest without explaining yourself',
+]
+const AFTERCARE = [
+  { id: 'water',     label: 'Drink some water', emoji: '💧' },
+  { id: 'light',     label: 'Softer lighting',  emoji: '🕯️' },
+  { id: 'blanket',   label: 'Blanket or comfort item', emoji: '🧸' },
+  { id: 'message',   label: 'Message someone safe', emoji: '💬' },
+  { id: 'write',     label: 'Write one sentence', emoji: '✏️' },
+  { id: 'change',    label: 'Change environment', emoji: '🚶' },
+  { id: 'rest',      label: 'Rest', emoji: '🌙' },
+  { id: 'nothing',   label: 'Do nothing for a moment', emoji: '🌿' },
+]
+
+type Step = 'feet' | 'jaw' | 'breathe' | 'breathe-mode' | 'feel' | 'need' | 'step' | 'aftercare'
+
+const BREATHING_MODES = [
+  { id: 'gentle',  label: 'Gentle',   inhale: 3, hold1: 0, exhale: 5, hold2: 0 },
+  { id: 'box',     label: 'Box',      inhale: 4, hold1: 4, exhale: 4, hold2: 4 },
+  { id: '478',     label: '4-7-8',    inhale: 4, hold1: 7, exhale: 8, hold2: 0 },
+]
+
+function BreathingOrb({ mode }: { mode: typeof BREATHING_MODES[0] }) {
+  const [phase, setPhase] = useState<'inhale'|'hold1'|'exhale'|'hold2'>('inhale')
+  const [label, setLabel] = useState('Breathe in…')
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const sequence = [
+      { phase: 'inhale' as const, label: 'Breathe in…',  dur: mode.inhale },
+      ...(mode.hold1 ? [{ phase: 'hold1' as const, label: 'Hold…', dur: mode.hold1 }] : []),
+      { phase: 'exhale' as const, label: 'Breathe out…', dur: mode.exhale },
+      ...(mode.hold2 ? [{ phase: 'hold2' as const, label: 'Hold…', dur: mode.hold2 }] : []),
+    ]
+    let idx = 0
+    const run = () => {
+      const s = sequence[idx % sequence.length]
+      setPhase(s.phase)
+      setLabel(s.label)
+      idx++
+      timerRef.current = setTimeout(run, s.dur * 1000)
+    }
+    run()
+    return () => { if (timerRef.current) clearTimeout(timerRef.current) }
+  }, [mode])
+
+  const scale = phase === 'inhale' ? 1.45 : phase === 'exhale' ? 0.75 : 1.1
+  const dur = phase === 'inhale' ? mode.inhale : phase === 'exhale' ? mode.exhale : (mode.hold1 || mode.hold2 || 4)
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative flex items-center justify-center w-40 h-40">
+        {/* Outer glow ring */}
+        <motion.div
+          animate={{ scale, opacity: phase === 'hold1' || phase === 'hold2' ? 0.6 : 0.3 }}
+          transition={{ duration: dur, ease: 'easeInOut' }}
+          className="absolute inset-0 rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(155,17,30,0.25) 0%, transparent 70%)' }}
+        />
+        {/* Main orb */}
+        <motion.div
+          animate={{ scale }}
+          transition={{ duration: dur, ease: 'easeInOut' }}
+          className="w-24 h-24 rounded-full flex items-center justify-center text-4xl"
+          style={{
+            background: 'radial-gradient(circle at 35% 35%, #E8A3B8, #9B111E)',
+            boxShadow: '0 0 40px rgba(155,17,30,0.4), inset 0 2px 8px rgba(255,255,255,0.3)',
+          }}
+          aria-label="Breathing orb"
+        >
+          💎
+        </motion.div>
+      </div>
+      <motion.p
+        key={label}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-lg font-display text-white/90"
+      >
+        {label}
+      </motion.p>
+    </div>
+  )
+}
+
 export function CalmOverlay({ isOpen, onClose }: CalmOverlayProps) {
   const { user } = useAuth()
-  const [tab, setTab] = useState<CalmTab>('breathe')
-  const [breathingMode, setBreathingMode] = useState<BreathingMode>('box')
-  const [selectedEmotion, setSelectedEmotion] = useState<string | null>(null)
-  const [selectedNeeds, setSelectedNeeds] = useState<string[]>([])
-  const [note, setNote] = useState('')
+  const navigate = useNavigate()
+  const [step, setStep] = useState<Step>('feet')
+  const [breathMode, setBreathMode] = useState(BREATHING_MODES[0])
+  const [emotion, setEmotion] = useState('')
+  const [need, setNeed] = useState('')
+  const [tinyStep] = useState(() => TINY_STEPS[Math.floor(Math.random() * TINY_STEPS.length)])
+  const [aftercare, setAftercareItems] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const [aftercareChecked, setAftercareChecked] = useState<string[]>([])
-  const [aftercareSaved, setAftercareSaved] = useState(false)
-  const [feelingBetter, setFeelingBetter] = useState(false)
 
+  // Reset when opened
   useEffect(() => {
     if (isOpen) {
-      setTab('breathe')
-      setSelectedEmotion(null)
-      setSelectedNeeds([])
-      setNote('')
-      setSaved(false)
-      setAftercareChecked([])
-      setAftercareSaved(false)
-      setFeelingBetter(false)
+      setStep('feet')
+      setEmotion('')
+      setNeed('')
+      setAftercareItems([])
     }
   }, [isOpen])
-
-  useEffect(() => {
-    if (isOpen) document.body.style.overflow = 'hidden'
-    else document.body.style.overflow = ''
-    return () => { document.body.style.overflow = '' }
-  }, [isOpen])
-
-  const toggleNeed = (need: string) =>
-    setSelectedNeeds(prev => prev.includes(need) ? prev.filter(n => n !== need) : [...prev, need])
 
   const toggleAftercare = (id: string) =>
-    setAftercareChecked(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
+    setAftercareItems(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
 
   const saveEpisode = async () => {
-    if (!user) return
+    if (!user) { onClose(); return }
     setSaving(true)
-    const { error } = await supabase.from('episode_logs').insert({
+    await supabase.from('episode_logs').insert({
       user_id: user.id,
-      trigger: 'calm session',
-      notes: note || null,
-      what_helped: selectedNeeds,
-      aftercare_completed: aftercareChecked,
+      trigger: 'calm-mode',
+      intensity: null,
+      body_sensations: emotion ? [emotion] : [],
+      what_helped: need ? [need] : [],
+      aftercare_completed: aftercare,
+      notes: `Calm mode session. Felt: ${emotion || 'unspecified'}. Needed: ${need || 'unspecified'}.`,
     })
     setSaving(false)
-    if (!error) {
-      setSaved(true)
-      toast.success('Saved. You did something kind for yourself. 💎', {
-        style: { background: '#FFF5EC', color: '#2E1F25', border: '1px solid #F2A8C8' },
-      })
-    }
-  }
-
-  const saveAftercare = async () => {
-    if (!user || aftercareChecked.length === 0) return
-    setSaving(true)
-    const { error } = await supabase.from('episode_logs').insert({
-      user_id: user.id,
-      trigger: 'aftercare',
-      aftercare_completed: aftercareChecked,
-      notes: 'Aftercare after calm session',
+    toast.success('Episode saved. You took care of yourself. 💎', {
+      style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
     })
-    setSaving(false)
-    if (!error) {
-      setAftercareSaved(true)
-      toast.success('Aftercare saved. You took care of yourself. 🌸', {
-        style: { background: '#FFF5EC', color: '#2E1F25', border: '1px solid #F2A8C8' },
-      })
-    }
+    onClose()
   }
 
-  const tabs: { id: CalmTab; label: string; emoji: string }[] = [
-    { id: 'breathe',   label: 'Breathe',   emoji: '🌬️' },
-    { id: 'ground',    label: 'Ground',    emoji: '🌿' },
-    { id: 'feel',      label: 'Feel',      emoji: '💗' },
-    { id: 'need',      label: 'Need',      emoji: '🤲' },
-    { id: 'steps',     label: 'Steps',     emoji: '👣' },
-    { id: 'aftercare', label: 'Aftercare', emoji: '🌸' },
-  ]
+  const STEPS: Step[] = ['feet','jaw','breathe','breathe-mode','feel','need','step','aftercare']
+  const stepIdx = STEPS.indexOf(step)
+  const progress = ((stepIdx + 1) / STEPS.length) * 100
+
+  const stepContent: Record<Step, React.ReactNode> = {
+    feet: (
+      <StepCard
+        emoji="🦶"
+        title="Put both feet on the floor."
+        subtitle="Feel the ground beneath you. You are here. You are real."
+        onNext={() => setStep('jaw')}
+        nextLabel="Done →"
+      />
+    ),
+    jaw: (
+      <StepCard
+        emoji="😮‍💨"
+        title="Unclench your jaw."
+        subtitle="Let your tongue drop from the roof of your mouth. Soften your face."
+        onNext={() => setStep('breathe')}
+        nextLabel="Done →"
+      />
+    ),
+    breathe: (
+      <StepCard
+        emoji="💎"
+        title="Breathe with the ruby."
+        subtitle="Watch it expand and contract. Let your breath follow."
+        onNext={() => setStep('breathe-mode')}
+        nextLabel="Choose a breathing style →"
+        showOrb
+        breathMode={breathMode}
+      />
+    ),
+    'breathe-mode': (
+      <div className="text-center space-y-6">
+        <p className="font-display text-xl text-white/90">Choose your breathing style</p>
+        <div className="flex flex-col gap-3 max-w-xs mx-auto">
+          {BREATHING_MODES.map(m => (
+            <button
+              key={m.id}
+              onClick={() => { setBreathMode(m); setStep('breathe') }}
+              className="px-5 py-3 rounded-2xl text-sm font-medium transition-all"
+              style={{
+                background: breathMode.id === m.id
+                  ? 'rgba(155,17,30,0.7)'
+                  : 'rgba(255,255,255,0.12)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+              }}
+            >
+              <span className="font-semibold">{m.label}</span>
+              <span className="text-white/60 ml-2 text-xs">
+                {m.inhale}s in{m.hold1 ? ` · ${m.hold1}s hold` : ''} · {m.exhale}s out{m.hold2 ? ` · ${m.hold2}s hold` : ''}
+              </span>
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setStep('feel')} className="text-white/50 text-sm hover:text-white/80 transition-colors">
+          Skip breathing →
+        </button>
+      </div>
+    ),
+    feel: (
+      <div className="text-center space-y-5">
+        <p className="font-display text-xl text-white/90">What are you feeling?</p>
+        <p className="text-white/60 text-sm">You don't have to name it perfectly.</p>
+        <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto">
+          {EMOTIONS.map(e => (
+            <button
+              key={e}
+              onClick={() => { setEmotion(e); setStep('need') }}
+              className="px-4 py-2 rounded-full text-sm transition-all"
+              style={{
+                background: emotion === e ? 'rgba(155,17,30,0.7)' : 'rgba(255,255,255,0.12)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+              }}
+            >
+              {e}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setStep('need')} className="text-white/50 text-sm hover:text-white/80 transition-colors">
+          Skip →
+        </button>
+      </div>
+    ),
+    need: (
+      <div className="text-center space-y-5">
+        <p className="font-display text-xl text-white/90">What do you need right now?</p>
+        <div className="flex flex-wrap justify-center gap-2 max-w-sm mx-auto">
+          {NEEDS.map(n => (
+            <button
+              key={n}
+              onClick={() => { setNeed(n); setStep('step') }}
+              className="px-4 py-2 rounded-full text-sm transition-all"
+              style={{
+                background: need === n ? 'rgba(155,17,30,0.7)' : 'rgba(255,255,255,0.12)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.2)',
+              }}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <button onClick={() => setStep('step')} className="text-white/50 text-sm hover:text-white/80 transition-colors">
+          Skip →
+        </button>
+      </div>
+    ),
+    step: (
+      <div className="text-center space-y-6">
+        <p className="font-display text-xl text-white/90">One tiny next step</p>
+        <div
+          className="mx-auto max-w-xs px-6 py-5 rounded-3xl text-white text-base italic leading-relaxed"
+          style={{ background: 'rgba(155,17,30,0.35)', border: '1px solid rgba(255,255,255,0.15)' }}
+        >
+          "{tinyStep}"
+        </div>
+        <div className="flex flex-col gap-3 items-center">
+          <button
+            onClick={() => setStep('aftercare')}
+            className="px-6 py-3 rounded-full text-white text-sm font-medium"
+            style={{ background: 'rgba(155,17,30,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            I feel a little better →
+          </button>
+          <button
+            onClick={() => { navigate('/vault'); onClose() }}
+            className="text-white/50 text-sm hover:text-white/80 transition-colors"
+          >
+            Open Comfort Vault
+          </button>
+          <button
+            onClick={() => { navigate('/safe-people'); onClose() }}
+            className="text-white/50 text-sm hover:text-white/80 transition-colors"
+          >
+            Message a safe person
+          </button>
+        </div>
+      </div>
+    ),
+    aftercare: (
+      <div className="text-center space-y-5">
+        <p className="font-display text-xl text-white/90">Let's take care of Ruby after the hard part.</p>
+        <p className="text-white/60 text-sm">Check off what feels right. No pressure.</p>
+        <div className="grid grid-cols-2 gap-2 max-w-sm mx-auto">
+          {AFTERCARE.map(item => (
+            <button
+              key={item.id}
+              onClick={() => toggleAftercare(item.id)}
+              className="flex items-center gap-2 px-3 py-2.5 rounded-2xl text-sm text-left transition-all"
+              style={{
+                background: aftercare.includes(item.id) ? 'rgba(155,17,30,0.5)' : 'rgba(255,255,255,0.1)',
+                color: 'white',
+                border: `1px solid ${aftercare.includes(item.id) ? 'rgba(248,200,220,0.5)' : 'rgba(255,255,255,0.15)'}`,
+              }}
+            >
+              <span>{item.emoji}</span>
+              <span className="leading-tight">{item.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2 items-center pt-2">
+          <button
+            onClick={saveEpisode}
+            disabled={saving}
+            className="px-6 py-3 rounded-full text-white text-sm font-medium disabled:opacity-50"
+            style={{ background: 'rgba(155,17,30,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}
+          >
+            {saving ? 'Saving…' : 'Save & close 💎'}
+          </button>
+          <button onClick={onClose} className="text-white/40 text-xs hover:text-white/70 transition-colors">
+            Close without saving
+          </button>
+        </div>
+      </div>
+    ),
+  }
 
   return (
     <AnimatePresence>
@@ -149,295 +336,98 @@ export function CalmOverlay({ isOpen, onClose }: CalmOverlayProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex flex-col"
-          style={{ background: 'linear-gradient(160deg, #1a0810 0%, #2d0f1a 40%, #0f1a14 100%)' }}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Calm support space"
+          transition={{ duration: 0.4 }}
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center px-6 overflow-y-auto"
+          style={{
+            background: 'linear-gradient(160deg, rgba(46,31,37,0.97) 0%, rgba(80,20,30,0.97) 50%, rgba(30,50,35,0.95) 100%)',
+            backdropFilter: 'blur(20px)',
+          }}
         >
-          {/* Close */}
-          <div className="flex justify-between items-center p-4 shrink-0">
-            <div className="flex items-center gap-2">
-              <span className="text-xl">💎</span>
-              <span className="text-white/40 text-xs font-medium tracking-wide uppercase">Ruby's Calm Space</span>
-            </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded-full bg-white/10 text-white/60 hover:bg-white/20 hover:text-white transition-colors"
-              aria-label="Close calm space"
-            >
-              <X size={18} />
-            </button>
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-5 right-5 text-white/40 hover:text-white/80 transition-colors text-2xl leading-none"
+            aria-label="Close calm mode"
+          >
+            ✕
+          </button>
+
+          {/* Progress bar */}
+          <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: 'rgba(255,255,255,0.1)' }}>
+            <motion.div
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.4 }}
+              className="h-full"
+              style={{ background: 'linear-gradient(90deg, #C94C63, #E8A3B8)' }}
+            />
           </div>
 
-          {/* Main message */}
+          {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-center px-6 pb-4 shrink-0"
+            className="text-center mb-8 mt-8"
           >
-            <h1 className="font-display text-2xl sm:text-3xl text-white/90 mb-1.5">
-              You are safe in this moment.
-            </h1>
-            <p className="text-white/45 text-sm">One breath first. You made it here. That counts.</p>
+            <p className="text-white/40 text-xs tracking-widest uppercase mb-1">Ruby's Calm Space</p>
+            <h1 className="font-display text-2xl text-white/90">You are safe in this moment.</h1>
           </motion.div>
 
-          {/* Tab navigation */}
-          <div className="flex gap-1.5 px-4 pb-3 overflow-x-auto shrink-0" style={{ scrollbarWidth: 'none' }}>
-            {tabs.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
-                  tab === t.id
-                    ? 'bg-[#B83A55] text-white shadow-lg'
-                    : 'bg-white/8 text-white/55 hover:bg-white/15'
-                }`}
-              >
-                <span>{t.emoji}</span>
-                <span>{t.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Tab content */}
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
+          {/* Step content */}
+          <div className="w-full max-w-md">
             <AnimatePresence mode="wait">
               <motion.div
-                key={tab}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
+                key={step}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
               >
-
-                {/* ── BREATHE ── */}
-                {tab === 'breathe' && (
-                  <div className="flex flex-col items-center gap-5">
-                    <div className="flex flex-col gap-2 w-full max-w-sm">
-                      {breathingModes.map(mode => (
-                        <button
-                          key={mode.id}
-                          onClick={() => setBreathingMode(mode.id)}
-                          className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm transition-all ${
-                            breathingMode === mode.id
-                              ? 'bg-[#B83A55]/30 border border-[#B83A55]/50 text-white'
-                              : 'bg-white/6 border border-white/10 text-white/55 hover:bg-white/12'
-                          }`}
-                        >
-                          <div className="text-left">
-                            <div className="font-medium">{mode.label}</div>
-                            <div className="text-xs opacity-70 mt-0.5">{mode.desc}</div>
-                          </div>
-                          {breathingMode === mode.id && <ChevronRight size={16} className="text-[#B83A55]" />}
-                        </button>
-                      ))}
-                    </div>
-                    <BreathingOrb mode={breathingMode} />
-                  </div>
-                )}
-
-                {/* ── GROUND ── */}
-                {tab === 'ground' && <GroundingExercise />}
-
-                {/* ── FEEL ── */}
-                {tab === 'feel' && (
-                  <div className="max-w-sm mx-auto">
-                    <h2 className="text-white/75 text-center mb-4 font-display text-lg">What are you feeling?</h2>
-                    <div className="flex flex-wrap gap-2 justify-center">
-                      {emotions.map(emotion => (
-                        <button
-                          key={emotion}
-                          onClick={() => setSelectedEmotion(emotion === selectedEmotion ? null : emotion)}
-                          className={`px-4 py-2.5 rounded-full text-sm capitalize transition-all ${
-                            selectedEmotion === emotion
-                              ? 'bg-[#B83A55] text-white shadow-lg'
-                              : 'bg-white/10 text-white/65 hover:bg-white/18'
-                          }`}
-                        >
-                          {emotion}
-                        </button>
-                      ))}
-                    </div>
-                    {selectedEmotion && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-6 p-4 rounded-2xl bg-white/8 border border-white/12 text-center"
-                      >
-                        <p className="text-white/65 text-sm italic leading-relaxed">
-                          Feeling {selectedEmotion} is real and valid. You don't have to fix it right now.
-                          Just let it be here with you for a moment.
-                        </p>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-
-                {/* ── NEED ── */}
-                {tab === 'need' && (
-                  <div className="max-w-sm mx-auto">
-                    <h2 className="text-white/75 text-center mb-4 font-display text-lg">What do you need right now?</h2>
-                    <div className="flex flex-wrap gap-2 justify-center mb-6">
-                      {needOptions.map(({ label, emoji }) => (
-                        <button
-                          key={label}
-                          onClick={() => toggleNeed(label)}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-sm transition-all ${
-                            selectedNeeds.includes(label)
-                              ? 'bg-[#B83A55] text-white shadow-lg'
-                              : 'bg-white/10 text-white/65 hover:bg-white/18'
-                          }`}
-                        >
-                          <span>{emoji}</span>
-                          <span>{label}</span>
-                        </button>
-                      ))}
-                    </div>
-                    {selectedNeeds.length > 0 && (
-                      <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        className="text-white/45 text-xs text-center italic"
-                      >
-                        It's okay to need these things. You are allowed to ask for them.
-                      </motion.p>
-                    )}
-                  </div>
-                )}
-
-                {/* ── STEPS ── */}
-                {tab === 'steps' && (
-                  <div className="max-w-sm mx-auto">
-                    <h2 className="text-white/75 text-center mb-4 font-display text-lg">One tiny next step</h2>
-                    <div className="space-y-2 mb-6">
-                      {tinySteps.map((step, i) => (
-                        <motion.div
-                          key={step}
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: i * 0.05 }}
-                          className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/7 border border-white/10 text-white/65 text-sm"
-                        >
-                          <span className="text-[#B83A55] text-xs font-bold shrink-0">{i + 1}</span>
-                          {step}
-                        </motion.div>
-                      ))}
-                    </div>
-
-                    {/* Save episode note */}
-                    <div className="space-y-3">
-                      <h3 className="text-white/50 text-sm text-center">Save a note about this moment</h3>
-                      <textarea
-                        value={note}
-                        onChange={e => setNote(e.target.value)}
-                        placeholder="What's happening right now…"
-                        rows={3}
-                        className="w-full px-4 py-3 rounded-2xl bg-white/10 border border-white/15 text-white placeholder-white/25 text-sm resize-none focus:outline-none focus:border-[#B83A55]/50"
-                      />
-                      <div className="flex gap-2">
-                        {!saved ? (
-                          <button
-                            onClick={saveEpisode}
-                            disabled={saving}
-                            className="flex-1 py-3 rounded-2xl bg-[#B83A55]/80 text-white text-sm font-medium hover:bg-[#B83A55] transition-colors disabled:opacity-40"
-                          >
-                            {saving ? 'Saving…' : 'Save this episode'}
-                          </button>
-                        ) : (
-                          <div className="flex-1 py-3 rounded-2xl bg-[#7DB87A]/30 border border-[#7DB87A]/40 text-[#A8D4A5] text-sm text-center">
-                            ✓ Saved. You did something kind for yourself.
-                          </div>
-                        )}
-                        <button
-                          onClick={() => { setFeelingBetter(true); setTab('aftercare') }}
-                          className="flex-1 py-3 rounded-2xl bg-white/10 border border-white/15 text-white/65 text-sm hover:bg-white/18 transition-colors"
-                        >
-                          I feel a little better →
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ── AFTERCARE ── */}
-                {tab === 'aftercare' && (
-                  <div className="max-w-sm mx-auto">
-                    <motion.div
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-center mb-5"
-                    >
-                      <div className="text-3xl mb-2">🌸</div>
-                      <h2 className="font-display text-xl text-white/85 mb-1">
-                        Let's take care of Ruby after the hard part.
-                      </h2>
-                        <p className="text-white/45 text-xs">
-                        {feelingBetter ? "You made it through. Now let\u2019s be gentle with yourself." : 'Check off what feels right.'}
-                      </p>
-                    </motion.div>
-
-                    <div className="space-y-2 mb-5">
-                      {aftercareItems.map((item, i) => {
-                        const checked = aftercareChecked.includes(item.id)
-                        return (
-                          <motion.button
-                            key={item.id}
-                            initial={{ opacity: 0, x: -8 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.04 }}
-                            onClick={() => toggleAftercare(item.id)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm text-left transition-all ${
-                              checked
-                                ? 'bg-[#7DB87A]/25 border border-[#7DB87A]/40 text-white/85'
-                                : 'bg-white/7 border border-white/10 text-white/55 hover:bg-white/12'
-                            }`}
-                          >
-                            <span className="text-lg shrink-0">{item.emoji}</span>
-                            <span className="flex-1">{item.label}</span>
-                            {checked && <Check size={14} className="text-[#7DB87A] shrink-0" />}
-                          </motion.button>
-                        )
-                      })}
-                    </div>
-
-                    {!aftercareSaved ? (
-                      <button
-                        onClick={saveAftercare}
-                        disabled={saving || aftercareChecked.length === 0}
-                        className="w-full py-3 rounded-2xl bg-[#7DB87A]/70 text-white text-sm font-medium hover:bg-[#7DB87A]/90 transition-colors disabled:opacity-40"
-                      >
-                        {saving ? 'Saving…' : `Save what helped (${aftercareChecked.length} selected)`}
-                      </button>
-                    ) : (
-                      <div className="py-3 rounded-2xl bg-[#7DB87A]/25 border border-[#7DB87A]/40 text-[#A8D4A5] text-sm text-center">
-                        ✓ Saved. You took care of yourself today. 🌸
-                      </div>
-                    )}
-
-                    <button
-                      onClick={onClose}
-                      className="w-full mt-3 py-3 rounded-2xl bg-white/8 border border-white/12 text-white/50 text-sm hover:bg-white/14 transition-colors"
-                    >
-                      Close and rest
-                    </button>
-                  </div>
-                )}
-
+                {stepContent[step]}
               </motion.div>
             </AnimatePresence>
           </div>
 
           {/* Disclaimer */}
-          <div className="px-6 py-3 border-t border-white/8 shrink-0">
-            <p className="text-white/25 text-xs text-center leading-relaxed">
-              This space is for comfort and grounding. If you are in immediate danger or may hurt yourself,
-              contact emergency services or a trusted person now.
-            </p>
-          </div>
+          <p className="absolute bottom-4 left-0 right-0 text-center text-white/25 text-[10px] px-6 leading-relaxed">
+            This space is for comfort and grounding. If you are in immediate danger or may hurt yourself, contact emergency services or a trusted person now.
+          </p>
         </motion.div>
       )}
     </AnimatePresence>
+  )
+}
+
+// ── Reusable step card ──────────────────────────────────────────────────────
+interface StepCardProps {
+  emoji: string
+  title: string
+  subtitle: string
+  onNext: () => void
+  nextLabel: string
+  showOrb?: boolean
+  breathMode?: typeof BREATHING_MODES[0]
+}
+
+function StepCard({ emoji, title, subtitle, onNext, nextLabel, showOrb, breathMode }: StepCardProps) {
+  return (
+    <div className="text-center space-y-6">
+      {showOrb && breathMode ? (
+        <BreathingOrb mode={breathMode} />
+      ) : (
+        <div className="text-6xl">{emoji}</div>
+      )}
+      <div>
+        <p className="font-display text-xl text-white/90 mb-2">{title}</p>
+        <p className="text-white/60 text-sm leading-relaxed max-w-xs mx-auto">{subtitle}</p>
+      </div>
+      <button
+        onClick={onNext}
+        className="px-7 py-3 rounded-full text-white text-sm font-medium transition-all hover:scale-105"
+        style={{ background: 'rgba(155,17,30,0.6)', border: '1px solid rgba(255,255,255,0.2)' }}
+      >
+        {nextLabel}
+      </button>
+    </div>
   )
 }

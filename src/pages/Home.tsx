@@ -1,272 +1,369 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { formatFullDate, getGreeting } from '../lib/dateUtils'
-
-// ── Colour tokens (deeper palette) ────────────────────────
-const C = {
-  ruby:      '#8B0D1A',
-  rubySoft:  '#B83A55',
-  blush:     '#F2A8C8',
-  softPink:  '#F7C5D8',
-  matcha:    '#7DB87A',
-  matchaDk:  '#4A7A47',
-  cream:     '#FFF5EC',
-  textDark:  '#2E1F25',
-  textMuted: '#6B5560',
-}
-
-// ── Primary 4 action cards ─────────────────────────────────
-const PRIMARY_ACTIONS = [
-  {
-    emoji: '💎',
-    label: 'I need calm',
-    sub: 'Open the calm space',
-    action: 'calm',
-    bg: `linear-gradient(135deg, ${C.ruby}18, ${C.rubySoft}22)`,
-    border: `${C.rubySoft}40`,
-    color: C.ruby,
-  },
-  {
-    emoji: '📖',
-    label: 'Write it out',
-    sub: 'Open your journal',
-    action: 'journal',
-    bg: `linear-gradient(135deg, ${C.blush}30, ${C.softPink}40)`,
-    border: `${C.blush}60`,
-    color: C.rubySoft,
-  },
-  {
-    emoji: '🔮',
-    label: 'Comfort Vault',
-    sub: 'Open something safe',
-    action: 'vault',
-    bg: `linear-gradient(135deg, ${C.softPink}25, ${C.blush}35)`,
-    border: `${C.rubySoft}30`,
-    color: C.rubySoft,
-  },
-  {
-    emoji: '🌸',
-    label: 'Log how I feel',
-    sub: 'Mood garden',
-    action: 'mood',
-    bg: `linear-gradient(135deg, ${C.matcha}18, ${C.matchaDk}12)`,
-    border: `${C.matcha}40`,
-    color: C.matchaDk,
-  },
-]
-
-// ── Secondary nav tiles ────────────────────────────────────
-const SECONDARY = [
-  { emoji: '💗', label: 'Episodes',    route: '/episodes' },
-  { emoji: '📷', label: 'Memories',   route: '/memories' },
-  { emoji: '🌿', label: 'Routines',   route: '/routines' },
-  { emoji: '✉️', label: 'Letters',    route: '/letters' },
-  { emoji: '🌷', label: 'Budget',     route: '/budget' },
-  { emoji: '🛡️', label: 'Safe Plan',  route: '/safety' },
-  { emoji: '📦', label: 'Worry Box',  route: '/worry' },
-  { emoji: '👥', label: 'Safe People',route: '/safe-people' },
-  { emoji: '🎮', label: 'Distract',   route: '/distraction' },
-  { emoji: '✨', label: 'ADHD Fun',   route: '/adhd' },
-  { emoji: '👤', label: 'Profile',    route: '/profile' },
-  { emoji: '⚙️', label: 'Settings',   route: '/settings' },
-]
-
-// ── Affirmations ───────────────────────────────────────────
-const AFFIRMATIONS = [
-  'You do not have to solve everything right now.',
-  'One breath first. That is enough.',
-  'You made it here. That counts.',
-  'This is a safe little place to land.',
-  'Today can be soft.',
-  'A tiny step is still movement.',
-  'You are allowed to rest.',
-  'Nothing has to be perfect to be worth saving.',
-  'Let\'s make this moment smaller.',
-  'You are safe in this moment.',
-]
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../lib/auth'
+import { supabase } from '../lib/supabaseClient'
+import { formatDate } from '../lib/dateUtils'
+import toast from 'react-hot-toast'
 
 interface HomeProps {
-  onOpenCalm?: () => void
+  onOpenCalm: () => void
 }
 
-export function Home({ onOpenCalm }: HomeProps) {
-  const navigate = useNavigate()
-  const [affirmIdx] = useState(() => Math.floor(Math.random() * AFFIRMATIONS.length))
+const AFFIRMATIONS = [
+  'You do not have to solve everything right now.',
+  'One breath first.',
+  'You made it here. That counts.',
+  'This can be soft.',
+  'You are allowed to rest.',
+  'Let\u2019s make this moment smaller.',
+  'A tiny step is still movement.',
+  'You are safe in this moment.',
+  'Nothing has to be perfect to be worth saving.',
+  'Today can be soft.',
+  'You have survived every hard day so far.',
+  'You are enough, exactly as you are.',
+]
 
-  const handleAction = (action: string) => {
-    if (action === 'calm') {
-      onOpenCalm?.()
-    } else if (action === 'journal') {
-      navigate('/journal')
-    } else if (action === 'vault') {
-      navigate('/vault')
-    } else if (action === 'mood') {
-      navigate('/mood')
+const PRIMARY_CARDS = [
+  {
+    id: 'calm',
+    emoji: '💎',
+    title: 'I need calm',
+    desc: 'Open your calm space. Breathe first.',
+    gradient: 'linear-gradient(135deg, #8B0D1A 0%, #C94C63 100%)',
+    glow: 'rgba(155,17,30,0.35)',
+  },
+  {
+    id: 'journal',
+    emoji: '📖',
+    title: 'Write it out',
+    desc: 'A private space to get it all out.',
+    gradient: 'linear-gradient(135deg, #B76E79 0%, #E8A3B8 100%)',
+    glow: 'rgba(183,110,121,0.3)',
+  },
+  {
+    id: 'vault',
+    emoji: '🔮',
+    title: 'Open my vault',
+    desc: 'Your comfort collection, just for you.',
+    gradient: 'linear-gradient(135deg, #6F8F5F 0%, #A8C686 100%)',
+    glow: 'rgba(111,143,95,0.3)',
+  },
+  {
+    id: 'mood',
+    emoji: '🌸',
+    title: 'Name the feeling',
+    desc: 'Log how you\u2019re feeling right now.',
+    gradient: 'linear-gradient(135deg, #C94C63 0%, #F8C8DC 100%)',
+    glow: 'rgba(201,76,99,0.25)',
+  },
+]
+
+const SECONDARY_CARDS = [
+  { to: '/episodes',    emoji: '💗', label: 'Episodes' },
+  { to: '/memories',   emoji: '📷', label: 'Memories' },
+  { to: '/routines',   emoji: '🌿', label: 'Routines' },
+  { to: '/letters',    emoji: '✉️',  label: 'Letters' },
+  { to: '/budget',     emoji: '🌷', label: 'Soft Budget' },
+  { to: '/safety',     emoji: '🛡️',  label: 'Safe Plan' },
+  { to: '/safe-people',emoji: '👥', label: 'Safe People' },
+  { to: '/worry',      emoji: '📦', label: 'Worry Box' },
+  { to: '/distraction',emoji: '🎮', label: 'Distraction' },
+  { to: '/draw',       emoji: '🎨', label: 'Draw' },
+  { to: '/adhd',       emoji: '✨', label: 'ADHD Fun' },
+  { to: '/profile',    emoji: '👤', label: 'Profile' },
+]
+
+const toastStyle = { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' }
+
+export function Home({ onOpenCalm }: HomeProps) {
+  const { user } = useAuth()
+  const navigate = useNavigate()
+  const [affirmation] = useState(() => AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)])
+  const [gemPulse, setGemPulse] = useState(false)
+
+  // Quick check-in state
+  const [checkInDone, setCheckInDone] = useState(false)
+  const [heaviness, setHeaviness] = useState('')
+  const [emotion, setEmotion] = useState('')
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const HEAVINESS = ['Light', 'Manageable', 'Heavy', 'Overwhelming']
+  const EMOTIONS = ['anxious','sad','numb','overwhelmed','angry','scared','okay','hopeful','tired','proud']
+
+  // Check if already checked in today
+  useEffect(() => {
+    if (!user) return
+    const checkToday = async () => {
+      const today = new Date().toISOString().split('T')[0]
+      const { data } = await supabase
+        .from('check_ins')
+        .select('id')
+        .eq('user_id', user.id)
+        .gte('created_at', today)
+        .limit(1)
+      if (data && data.length > 0) setCheckInDone(true)
+    }
+    checkToday()
+  }, [user])
+
+  const saveCheckIn = async () => {
+    if (!user || !heaviness) return
+    setSaving(true)
+    const { error } = await supabase.from('check_ins').insert({
+      user_id: user.id,
+      heaviness,
+      emotion: emotion || null,
+      note: note || null,
+    })
+    setSaving(false)
+    if (!error) {
+      setCheckInDone(true)
+      setGemPulse(true)
+      setTimeout(() => setGemPulse(false), 2000)
+      toast.success('Saved. You showed up for yourself. 💎', { style: toastStyle })
     }
   }
 
+  const handlePrimaryCard = (id: string) => {
+    if (id === 'calm') { onOpenCalm(); return }
+    if (id === 'journal') { navigate('/journal'); return }
+    if (id === 'vault') { navigate('/vault'); return }
+    if (id === 'mood') { navigate('/mood'); return }
+  }
+
   return (
-    <div
-      className="min-h-screen pb-32"
-      style={{
-        background: `linear-gradient(160deg, ${C.cream} 0%, ${C.softPink}55 35%, ${C.cream} 60%, #D4EDD0 100%)`,
-      }}
-    >
-      {/* ── Decorative blobs ──────────────────────────── */}
-      <div
-        className="fixed top-0 left-0 w-80 h-80 rounded-full pointer-events-none"
-        style={{
-          background: `radial-gradient(circle, ${C.blush}35 0%, transparent 70%)`,
-          transform: 'translate(-40%, -40%)',
-          zIndex: 0,
-        }}
-      />
-      <div
-        className="fixed bottom-20 right-0 w-64 h-64 rounded-full pointer-events-none"
-        style={{
-          background: `radial-gradient(circle, ${C.matcha}25 0%, transparent 70%)`,
-          transform: 'translate(30%, 30%)',
-          zIndex: 0,
-        }}
-      />
-
-      <div className="relative z-10 max-w-lg mx-auto px-4 pt-8 space-y-8">
-
-        {/* ── Greeting ──────────────────────────────── */}
+    <div className="space-y-8 pb-4">
+      {/* ── Hero ─────────────────────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="text-center pt-4"
+      >
+        {/* Glowing ruby gem — the emotional anchor */}
         <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="text-center"
+          className="relative inline-flex items-center justify-center mb-5 cursor-pointer"
+          onClick={onOpenCalm}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.95 }}
+          title="Open calm space"
         >
+          {/* Outer glow */}
           <motion.div
-            animate={{ y: [0, -6, 0] }}
-            transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
-            className="text-5xl mb-3"
-            aria-hidden="true"
+            className="absolute rounded-full"
+            style={{
+              width: 120, height: 120,
+              background: 'radial-gradient(circle, rgba(155,17,30,0.25) 0%, transparent 70%)',
+            }}
+            animate={gemPulse
+              ? { scale: [1, 1.6, 1], opacity: [0.4, 0.8, 0.4] }
+              : { scale: [1, 1.15, 1], opacity: [0.3, 0.5, 0.3] }
+            }
+            transition={{ duration: gemPulse ? 1.2 : 3, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          {/* Middle ring */}
+          <motion.div
+            className="absolute rounded-full"
+            style={{
+              width: 90, height: 90,
+              background: 'radial-gradient(circle, rgba(201,76,99,0.2) 0%, transparent 70%)',
+            }}
+            animate={{ scale: [1, 1.2, 1], opacity: [0.2, 0.4, 0.2] }}
+            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
+          />
+          {/* Gem */}
+          <motion.div
+            className="relative z-10 w-20 h-20 rounded-2xl flex items-center justify-center text-4xl"
+            style={{
+              background: 'radial-gradient(circle at 35% 30%, #E8A3B8 0%, #9B111E 60%, #5A0A10 100%)',
+              boxShadow: '0 8px 32px rgba(155,17,30,0.5), inset 0 2px 8px rgba(255,255,255,0.25)',
+              transform: 'rotate(45deg)',
+            }}
+            animate={gemPulse
+              ? { boxShadow: ['0 8px 32px rgba(155,17,30,0.5)', '0 8px 60px rgba(155,17,30,0.9)', '0 8px 32px rgba(155,17,30,0.5)'] }
+              : {}
+            }
+            transition={{ duration: 1.2 }}
           >
-            💎
+            <span style={{ transform: 'rotate(-45deg)', display: 'block' }}>💎</span>
           </motion.div>
-          <h1 className="font-display text-4xl mb-2" style={{ color: C.textDark }}>
-            Hi Ruby.
-          </h1>
-          <p className="text-base mb-1" style={{ color: C.rubySoft }}>
-            You are safe here. One breath first.
-          </p>
-          <p className="text-xs" style={{ color: C.textMuted }}>
-            {getGreeting()} · {formatFullDate()}
-          </p>
         </motion.div>
 
-        {/* ── Affirmation ───────────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.15 }}
-          className="rounded-3xl px-6 py-5 text-center"
-          style={{
-            background: `linear-gradient(135deg, ${C.blush}35, ${C.softPink}45)`,
-            border: `1.5px solid ${C.blush}80`,
-            boxShadow: `0 4px 24px ${C.rubySoft}12`,
-          }}
+        <motion.h1
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="font-display text-3xl text-[#3A2A2F] mb-1"
         >
-          <p className="font-display text-lg italic leading-relaxed" style={{ color: C.ruby }}>
-            "{AFFIRMATIONS[affirmIdx]}"
-          </p>
-          <div className="flex justify-center gap-1.5 mt-3">
-            {[0,1,2].map(i => (
-              <div key={i} className="sparkle-dot" style={{ animationDelay: `${i * 0.4}s` }} />
-            ))}
-          </div>
-        </motion.div>
-
-        {/* ── Primary 4 action cards ────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <div className="grid grid-cols-2 gap-3">
-            {PRIMARY_ACTIONS.map((item, i) => (
-              <motion.button
-                key={item.label}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.22 + i * 0.07, type: 'spring', stiffness: 240, damping: 22 }}
-                whileHover={{ scale: 1.04, y: -2 }}
-                whileTap={{ scale: 0.97 }}
-                onClick={() => handleAction(item.action)}
-                className="flex flex-col items-start gap-2 p-5 rounded-3xl text-left transition-all"
-                style={{
-                  background: item.bg,
-                  border: `1.5px solid ${item.border}`,
-                  boxShadow: `0 4px 20px ${item.color}10`,
-                  minHeight: '110px',
-                }}
-              >
-                <span className="text-3xl">{item.emoji}</span>
-                <div>
-                  <p className="font-semibold text-sm leading-tight" style={{ color: item.color }}>
-                    {item.label}
-                  </p>
-                  <p className="text-xs mt-0.5" style={{ color: C.textMuted }}>
-                    {item.sub}
-                  </p>
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </motion.div>
-
-        {/* ── Divider ───────────────────────────────── */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px" style={{ background: `${C.blush}60` }} />
-          <span className="text-xs" style={{ color: C.textMuted }}>everything else</span>
-          <div className="flex-1 h-px" style={{ background: `${C.blush}60` }} />
-        </div>
-
-        {/* ── Secondary nav grid ────────────────────── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-          className="grid grid-cols-4 gap-2"
-        >
-          {SECONDARY.map((item, i) => (
-            <motion.button
-              key={item.route}
-              initial={{ opacity: 0, scale: 0.88 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.48 + i * 0.03, type: 'spring', stiffness: 260, damping: 22 }}
-              whileHover={{ scale: 1.08, y: -2 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => navigate(item.route)}
-              className="flex flex-col items-center gap-1.5 py-3 px-1 rounded-2xl transition-all"
-              style={{
-                background: 'rgba(255,245,236,0.7)',
-                border: `1px solid ${C.blush}50`,
-                boxShadow: `0 2px 10px ${C.textDark}06`,
-              }}
-            >
-              <span className="text-xl">{item.emoji}</span>
-              <span className="text-[10px] font-medium text-center leading-tight" style={{ color: C.textMuted }}>
-                {item.label}
-              </span>
-            </motion.button>
-          ))}
-        </motion.div>
-
-        {/* ── Soft footer ───────────────────────────── */}
+          Hi Ruby.
+        </motion.h1>
         <motion.p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.7 }}
-          className="text-center text-xs pb-4 italic"
-          style={{ color: `${C.textMuted}80` }}
+          transition={{ delay: 0.45 }}
+          className="text-[#7A6670] text-sm mb-2"
         >
-          "This is a safe little place to land." 💎
+          Breathe first. You&apos;re safe here.
         </motion.p>
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="text-[#9B111E]/70 text-xs italic"
+        >
+          {formatDate(new Date().toISOString())}
+        </motion.p>
+
+        {/* Affirmation */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.75 }}
+          className="mt-4 mx-auto max-w-xs px-5 py-3 rounded-2xl text-sm italic text-[#7A6670] leading-relaxed"
+          style={{ background: 'rgba(248,200,220,0.25)', border: '1px solid rgba(248,200,220,0.4)' }}
+        >
+          &ldquo;{affirmation}&rdquo;
+        </motion.div>
+      </motion.div>
+
+      {/* ── Primary action cards ──────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-3">
+        {PRIMARY_CARDS.map((card, i) => (
+          <motion.button
+            key={card.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 * i + 0.3 }}
+            whileHover={{ scale: 1.03, y: -2 }}
+            whileTap={{ scale: 0.97 }}
+            onClick={() => handlePrimaryCard(card.id)}
+            className="relative overflow-hidden rounded-3xl p-5 text-left"
+            style={{
+              background: card.gradient,
+              boxShadow: `0 6px 24px ${card.glow}`,
+              minHeight: 120,
+            }}
+          >
+            <div className="text-3xl mb-2">{card.emoji}</div>
+            <p className="text-white font-semibold text-sm leading-tight mb-1">{card.title}</p>
+            <p className="text-white/70 text-xs leading-snug">{card.desc}</p>
+            {/* Subtle shine */}
+            <div
+              className="absolute top-0 right-0 w-16 h-16 rounded-full pointer-events-none"
+              style={{ background: 'radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%)' }}
+            />
+          </motion.button>
+        ))}
+      </div>
+
+      {/* ── Quick check-in ────────────────────────────────────────────── */}
+      {!checkInDone ? (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="rounded-3xl p-5"
+          style={{
+            background: 'rgba(255,255,255,0.75)',
+            border: '1.5px solid rgba(248,200,220,0.5)',
+            boxShadow: '0 4px 20px rgba(155,17,30,0.07)',
+          }}
+        >
+          <p className="font-display text-base text-[#3A2A2F] mb-1">How heavy does today feel?</p>
+          <p className="text-xs text-[#7A6670] mb-3">No right answer. Just check in.</p>
+          <div className="flex gap-2 flex-wrap mb-4">
+            {HEAVINESS.map(h => (
+              <button
+                key={h}
+                onClick={() => setHeaviness(h)}
+                className="px-3 py-1.5 rounded-full text-xs font-medium transition-all"
+                style={{
+                  background: heaviness === h ? '#9B111E' : 'rgba(248,200,220,0.3)',
+                  color: heaviness === h ? 'white' : '#7A6670',
+                  border: `1px solid ${heaviness === h ? '#9B111E' : 'rgba(248,200,220,0.6)'}`,
+                }}
+              >
+                {h}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-[#7A6670] mb-2">Right now I feel…</p>
+          <div className="flex gap-1.5 flex-wrap mb-3">
+            {EMOTIONS.map(e => (
+              <button
+                key={e}
+                onClick={() => setEmotion(e)}
+                className="px-2.5 py-1 rounded-full text-xs transition-all"
+                style={{
+                  background: emotion === e ? '#C94C63' : 'rgba(248,200,220,0.2)',
+                  color: emotion === e ? 'white' : '#7A6670',
+                  border: `1px solid ${emotion === e ? '#C94C63' : 'rgba(248,200,220,0.4)'}`,
+                }}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
+          <textarea
+            value={note}
+            onChange={e => setNote(e.target.value)}
+            placeholder="Want to name what's going on? (optional)"
+            rows={2}
+            className="w-full px-3 py-2 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-xs resize-none focus:outline-none focus:border-[#C94C63] transition-all mb-3"
+          />
+          <button
+            onClick={saveCheckIn}
+            disabled={!heaviness || saving}
+            className="w-full py-3 rounded-2xl text-white text-sm font-medium disabled:opacity-40 transition-all"
+            style={{ background: 'linear-gradient(135deg, #8B0D1A, #C94C63)' }}
+          >
+            {saving ? 'Saving…' : 'Save check-in 💎'}
+          </button>
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="rounded-3xl p-5 text-center"
+          style={{
+            background: 'rgba(168,198,134,0.15)',
+            border: '1.5px solid rgba(168,198,134,0.4)',
+          }}
+        >
+          <div className="text-2xl mb-1">🌿</div>
+          <p className="text-[#6F8F5F] text-sm font-medium">You showed up for yourself today.</p>
+          <p className="text-[#7A6670] text-xs mt-0.5">Check-in saved.</p>
+        </motion.div>
+      )}
+
+      {/* ── Secondary modules grid ────────────────────────────────────── */}
+      <div>
+        <p className="text-xs text-[#7A6670] mb-3 font-medium tracking-wide uppercase">More of your space</p>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {SECONDARY_CARDS.map((card, i) => (
+            <motion.button
+              key={card.to}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.05 * i + 0.6 }}
+              whileHover={{ scale: 1.05, y: -2 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate(card.to)}
+              className="flex flex-col items-center gap-1.5 p-3 rounded-2xl transition-all"
+              style={{
+                background: 'rgba(255,255,255,0.65)',
+                border: '1px solid rgba(248,200,220,0.4)',
+                boxShadow: '0 2px 8px rgba(155,17,30,0.05)',
+              }}
+            >
+              <span className="text-2xl">{card.emoji}</span>
+              <span className="text-[10px] text-[#7A6670] font-medium text-center leading-tight">{card.label}</span>
+            </motion.button>
+          ))}
+        </div>
       </div>
     </div>
   )
