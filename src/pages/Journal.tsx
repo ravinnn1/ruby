@@ -11,6 +11,19 @@ import { ConfirmModal } from '../components/ui/GentleModal'
 import { formatDateTime } from '../lib/dateUtils'
 import toast from 'react-hot-toast'
 
+// Font options available in the editor
+const FONT_OPTIONS = [
+  { id: 'georgia',     label: 'Georgia',           family: 'Georgia, serif' },
+  { id: 'lora',        label: 'Lora',              family: "'Lora', serif" },
+  { id: 'cormorant',   label: 'Cormorant',         family: "'Cormorant Garamond', serif" },
+  { id: 'playfair',    label: 'Playfair',          family: "'Playfair Display', serif" },
+  { id: 'dancing',     label: 'Dancing Script',    family: "'Dancing Script', cursive" },
+  { id: 'crimson',     label: 'Crimson Pro',       family: "'Crimson Pro', serif" },
+  { id: 'garamond',    label: 'EB Garamond',       family: "'EB Garamond', serif" },
+  { id: 'baskerville', label: 'Libre Baskerville', family: "'Libre Baskerville', serif" },
+  { id: 'nunito',      label: 'Nunito',            family: "'Nunito', sans-serif" },
+]
+
 const promptCategories = [
   { id: 'get-it-out',      label: 'Get it out',                    emoji: '💭' },
   { id: 'wish-understood', label: 'What I wish someone understood', emoji: '🤍' },
@@ -74,6 +87,7 @@ export function Journal() {
   const [body, setBody] = useState('')
   const [selectedMood, setSelectedMood] = useState<string | null>(null)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedFont, setSelectedFont] = useState(FONT_OPTIONS[0].id)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { if (user) loadEntries() }, [user])
@@ -163,6 +177,19 @@ export function Journal() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <p className="text-xs text-[#7A6670] mb-2 font-medium tracking-wide uppercase">Start with a prompt</p>
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {/* Free write — always first */}
+            <button
+              onClick={() => openNew()}
+              className="flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-2xl text-center transition-all hover:scale-105 active:scale-95"
+              style={{
+                background: 'linear-gradient(135deg, #9B111E, #C94C63)',
+                minWidth: 88,
+                boxShadow: '0 4px 16px rgba(155,17,30,0.3)',
+              }}
+            >
+              <span className="text-xl">✏️</span>
+              <span className="text-[10px] text-white leading-tight font-medium">Free write</span>
+            </button>
             {promptCategories.map(p => (
               <button
                 key={p.id}
@@ -179,18 +206,6 @@ export function Journal() {
                 <span className="text-[10px] text-[#7A6670] leading-tight font-medium">{p.label}</span>
               </button>
             ))}
-            <button
-              onClick={() => openNew()}
-              className="flex-shrink-0 flex flex-col items-center gap-1 px-4 py-3 rounded-2xl text-center transition-all hover:scale-105 active:scale-95"
-              style={{
-                background: 'linear-gradient(135deg, #9B111E, #C94C63)',
-                minWidth: 80,
-                boxShadow: '0 4px 16px rgba(155,17,30,0.3)',
-              }}
-            >
-              <span className="text-xl">✏️</span>
-              <span className="text-[10px] text-white leading-tight font-medium">Free write</span>
-            </button>
           </div>
         </motion.div>
       )}
@@ -252,7 +267,28 @@ export function Journal() {
                     style={{ fontFamily: 'Georgia, serif', letterSpacing: '0.01em' }}
                   />
 
-                  {/* Body — lined paper feel */}
+                  {/* Font picker */}
+                  <div className="flex gap-1.5 flex-wrap mb-3">
+                    <span className="text-[10px] text-[#B8A0A8] self-center mr-1">Font:</span>
+                    {FONT_OPTIONS.map(f => (
+                      <button
+                        key={f.id}
+                        onClick={() => setSelectedFont(f.id)}
+                        className="px-2.5 py-1 rounded-full text-[10px] transition-all"
+                        style={{
+                          fontFamily: f.family,
+                          background: selectedFont === f.id ? '#9B111E' : 'rgba(248,200,220,0.2)',
+                          color: selectedFont === f.id ? 'white' : '#7A6670',
+                          border: `1px solid ${selectedFont === f.id ? '#9B111E' : 'rgba(248,200,220,0.4)'}`,
+                          fontSize: 11,
+                        }}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Body — lined paper feel, uses selected font */}
                   <textarea
                     value={body}
                     onChange={e => setBody(e.target.value)}
@@ -260,7 +296,7 @@ export function Journal() {
                     rows={10}
                     className="w-full px-0 py-1 bg-transparent text-[#3A2A2F] placeholder-[#C4A8B0] resize-none focus:outline-none"
                     style={{
-                      fontFamily: 'Georgia, serif',
+                      fontFamily: FONT_OPTIONS.find(f => f.id === selectedFont)?.family || 'Georgia, serif',
                       fontSize: '15px',
                       lineHeight: '28px',
                       backgroundImage: 'repeating-linear-gradient(transparent, transparent 27px, rgba(183,110,121,0.1) 27px, rgba(183,110,121,0.1) 28px)',
