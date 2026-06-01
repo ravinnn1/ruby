@@ -52,13 +52,17 @@ export function SecretLetter() {
       {/* desktop lg: calm-btn is at bottom-8(32px), so envelope at ~5rem   */}
       <style>{`
         .secret-letter-btn {
-          bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
-          right: 1rem;
+          /* Same vertical level as the calm button (bottom-24 = 6rem on mobile) */
+          bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
+          /* Calm button is ~140px wide + 1rem right = ~156px from right edge */
+          right: calc(140px + 1.5rem);
         }
         @media (min-width: 1024px) {
           .secret-letter-btn {
-            bottom: 5rem;
-            right: 2rem;
+            /* Calm button is at bottom-8 = 2rem on desktop */
+            bottom: 2rem;
+            /* Calm button is ~160px wide + 2rem right = ~192px from right edge */
+            right: calc(160px + 2.5rem);
           }
         }
       `}</style>
