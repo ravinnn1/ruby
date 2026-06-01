@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
-import { BottomNav } from './BottomNav'
 import { FloatingCalmButton } from './FloatingCalmButton'
 import { CalmOverlay } from '../calm/CalmOverlay'
 import { supabaseConfigured } from '../../lib/supabaseClient'
@@ -53,18 +52,13 @@ export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellPr
 
       {/* Main content */}
       <main
-        className="lg:ml-64 pb-24 lg:pb-8 min-h-screen"
+        className="lg:ml-64 min-h-screen pb-8"
         style={{ paddingTop: !supabaseConfigured && !bannerDismissed ? '2.5rem' : undefined }}
       >
         <div className="max-w-3xl mx-auto px-4 py-6">
           <Outlet />
         </div>
       </main>
-
-      {/* Mobile bottom nav */}
-      <div className="lg:hidden">
-        <BottomNav />
-      </div>
 
       {/* Floating calm button — always visible, opens calm overlay */}
       <FloatingCalmButton onOpen={() => setInternalCalmOpen(true)} />
