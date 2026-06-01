@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import React, { useState } from 'react'
+import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate } from '../lib/dateUtils'
 import { FallingLeaves } from '../components/ui/FallingLeaves'
+import { FracturedRubyBg } from '../components/ui/FracturedRubyBg'
 import toast from 'react-hot-toast'
 
 interface HomeProps { onOpenCalm: () => void }
@@ -34,18 +35,18 @@ const PRIMARY_CARDS = [
 ]
 
 const QUICK_LINKS = [
-  { to: '/episodes',    emoji: '💗', label: 'Episodes' },
-  { to: '/memories',   emoji: '📷', label: 'Memories' },
-  { to: '/routines',   emoji: '🌿', label: 'Routines' },
-  { to: '/letters',    emoji: '💌', label: 'Letters' },
-  { to: '/budget',     emoji: '🌷', label: 'Budget' },
-  { to: '/safety',     emoji: '🛡️', label: 'Safe Plan' },
-  { to: '/safe-people',emoji: '👥', label: 'Safe People' },
-  { to: '/worry',      emoji: '📦', label: 'Worry Box' },
-  { to: '/games',      emoji: '🎮', label: 'Games' },
-  { to: '/distraction',emoji: '🎈', label: 'Distraction' },
-  { to: '/draw',       emoji: '🎨', label: 'Draw' },
-  { to: '/profile',    emoji: '👤', label: 'Profile' },
+  { to: '/episodes',     emoji: '💗', label: 'Episodes' },
+  { to: '/memories',    emoji: '📷', label: 'Memories' },
+  { to: '/routines',    emoji: '🌿', label: 'Routines' },
+  { to: '/letters',     emoji: '💌', label: 'Letters' },
+  { to: '/budget',      emoji: '🌷', label: 'Budget' },
+  { to: '/safety',      emoji: '🛡️', label: 'Safe Plan' },
+  { to: '/safe-people', emoji: '👥', label: 'Safe People' },
+  { to: '/worry',       emoji: '📦', label: 'Worry Box' },
+  { to: '/games',       emoji: '🎮', label: 'Games' },
+  { to: '/distraction', emoji: '🎈', label: 'Distraction' },
+  { to: '/draw',        emoji: '🎨', label: 'Draw' },
+  { to: '/profile',     emoji: '👤', label: 'Profile' },
 ]
 
 const HEAVY_OPTIONS = ['Light', 'Manageable', 'Heavy', 'Overwhelming']
@@ -84,113 +85,16 @@ export function Home({ onOpenCalm }: HomeProps) {
 
   return (
     <div className="relative min-h-screen">
-      {/* ── Shader-doodle animated background — Fractured Ruby low-poly ── */}
-      <div className="home-shader-bg" aria-hidden="true">
-        {/* @ts-ignore — shader-doodle is a web component */}
-        <shader-doodle>
-          <script type="x-shader/x-fragment">{`
-            precision highp float;
-            uniform float u_time;
-            uniform vec2  u_resolution;
 
-            // ── Hash / random ──────────────────────────────────────────
-            vec2 hash2(vec2 p) {
-              p = vec2(dot(p, vec2(127.1, 311.7)),
-                       dot(p, vec2(269.5, 183.3)));
-              return fract(sin(p) * 43758.5453);
-            }
-            float hash1(vec2 p) {
-              return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-            }
-
-            // ── Voronoi — returns (dist-to-nearest, cell-id) ──────────
-            vec3 voronoi(vec2 x, float t) {
-              vec2 n = floor(x);
-              vec2 f = fract(x);
-              float minDist = 8.0;
-              float minDist2 = 8.0;
-              vec2  minCell = vec2(0.0);
-              for (int j = -2; j <= 2; j++) {
-                for (int i = -2; i <= 2; i++) {
-                  vec2 g = vec2(float(i), float(j));
-                  vec2 o = hash2(n + g);
-                  // Animate cell centres gently
-                  o = 0.5 + 0.5 * sin(t * 0.35 + 6.2831 * o);
-                  vec2 r = g + o - f;
-                  float d = dot(r, r);
-                  if (d < minDist) {
-                    minDist2 = minDist;
-                    minDist  = d;
-                    minCell  = n + g;
-                  } else if (d < minDist2) {
-                    minDist2 = d;
-                  }
-                }
-              }
-              return vec3(sqrt(minDist), sqrt(minDist2), hash1(minCell));
-            }
-
-            // ── Colour palette — ruby / garnet / blush / gold ─────────
-            vec3 rubyPalette(float t) {
-              // t in [0,1] → deep garnet → ruby red → coral → warm gold
-              vec3 a = vec3(0.50, 0.05, 0.08);   // deep garnet
-              vec3 b = vec3(0.85, 0.12, 0.18);   // ruby red
-              vec3 c = vec3(0.95, 0.35, 0.20);   // coral / orange
-              vec3 d = vec3(1.00, 0.82, 0.45);   // warm gold / highlight
-              if (t < 0.33) return mix(a, b, t / 0.33);
-              if (t < 0.66) return mix(b, c, (t - 0.33) / 0.33);
-              return mix(c, d, (t - 0.66) / 0.34);
-            }
-
-            void main() {
-              vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-              // Keep aspect ratio, centre at (0,0)
-              vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
-              float t = u_time;
-
-              // Two layers of Voronoi at different scales for depth
-              vec3 v1 = voronoi(p * 3.2 + vec2(0.0), t);
-              vec3 v2 = voronoi(p * 5.8 + vec2(3.7, 1.3), t * 0.7);
-
-              // Cell colour — each cell gets a unique hue from the palette
-              float cellVal = v1.z;                          // unique per cell
-              float edgeDist = v1.y - v1.x;                 // distance to edge
-              float edge = smoothstep(0.0, 0.08, edgeDist); // sharp facet edge
-
-              // Base colour from palette, varied per cell
-              vec3 col = rubyPalette(fract(cellVal * 3.7 + 0.1));
-
-              // Lighter highlight on cells closer to centre
-              float radial = 1.0 - length(p) * 0.55;
-              col = mix(col, col * 1.6 + vec3(0.15, 0.05, 0.05), radial * 0.5);
-
-              // Second Voronoi layer adds sub-facet shimmer
-              float shimmer = v2.z * 0.18;
-              col += shimmer * vec3(1.0, 0.7, 0.5);
-
-              // Dark facet edges — the "fractured" look
-              col *= edge;
-              col = mix(vec3(0.08, 0.01, 0.02), col, edge);
-
-              // Bright specular glint on some cells
-              float glint = pow(max(0.0, 1.0 - v1.x * 4.0), 6.0) * v1.z;
-              col += glint * vec3(1.0, 0.9, 0.8) * 0.6;
-
-              // Vignette — darker corners
-              float vig = 1.0 - smoothstep(0.5, 1.4, length(p));
-              col *= vig;
-
-              // Gamma
-              col = pow(max(col, vec3(0.0)), vec3(0.85));
-
-              gl_FragColor = vec4(col, 1.0);
-            }
-          `}</script>
-        {/* @ts-ignore */}
-        </shader-doodle>
+      {/* ── Fractured Ruby WebGL background ── */}
+      <div
+        aria-hidden="true"
+        style={{ position: 'absolute', inset: 0, zIndex: 0, overflow: 'hidden', minHeight: '100%' }}
+      >
+        <FracturedRubyBg />
       </div>
 
-      {/* Falling leaves — behind content */}
+      {/* Falling leaves — above shader, below content */}
       <FallingLeaves />
 
       <div className="relative z-10 space-y-7 pb-8">
@@ -210,11 +114,7 @@ export function Home({ onOpenCalm }: HomeProps) {
         >
           {/* Garnet ruby gem */}
           <div className="flex justify-center mb-6" style={{ minHeight: 90 }}>
-            <div
-              className="garnet-ruby"
-              onClick={onOpenCalm}
-              title="Open calm space"
-            />
+            <div className="garnet-ruby" onClick={onOpenCalm} title="Open calm space" />
           </div>
 
           <motion.h1
@@ -264,7 +164,6 @@ export function Home({ onOpenCalm }: HomeProps) {
                   minHeight: 110,
                 }}
               >
-                {/* Shine overlay */}
                 <div className="absolute inset-0 opacity-20" style={{ background: 'radial-gradient(circle at 20% 20%, white, transparent 60%)' }} />
                 <span className="text-3xl mb-2 relative z-10">{card.emoji}</span>
                 <p className="font-display text-white text-base leading-tight relative z-10">{card.title}</p>
@@ -274,7 +173,7 @@ export function Home({ onOpenCalm }: HomeProps) {
           </div>
         </div>
 
-        {/* ── Daily check-in (book-page card) ── */}
+        {/* ── Daily check-in ── */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -286,7 +185,6 @@ export function Home({ onOpenCalm }: HomeProps) {
             boxShadow: '0 4px 24px rgba(155,17,30,0.08), inset 0 1px 0 rgba(255,255,255,0.8)',
           }}
         >
-          {/* Book spine line */}
           <div className="absolute left-8 top-0 bottom-0 w-px" style={{ background: 'rgba(183,110,121,0.15)' }} />
           <div className="pl-4">
             <p className="font-display text-[#3A2A2F] text-base mb-1">How heavy does today feel?</p>
@@ -360,7 +258,7 @@ export function Home({ onOpenCalm }: HomeProps) {
           </div>
         </div>
 
-        {/* ── Tiny reassurance card ── */}
+        {/* ── Reassurance card ── */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
