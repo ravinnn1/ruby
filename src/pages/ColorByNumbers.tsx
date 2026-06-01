@@ -4,21 +4,32 @@ import { motion, AnimatePresence } from 'framer-motion'
 // ─────────────────────────────────────────────────────────────────
 // BUILT-IN IMAGE GALLERY
 // ─────────────────────────────────────────────────────────────────
-const GALLERY = [
-  { src: '/GettyImages-1368865446.webp', label: 'Ice Skates',   emoji: '⛸️' },
-  { src: '/skating.jpg',                 label: 'Skating',      emoji: '🛼' },
-  { src: '/forest.jpg',                  label: 'Forest',       emoji: '🌲' },
-  { src: '/love.jpg',                    label: 'Love',         emoji: '💗' },
-  { src: '/ruby.jpg',                    label: 'Ruby',         emoji: '💎' },
-  { src: '/volleyball.jpg',              label: 'Volleyball',   emoji: '🏐' },
-  { src: '/download (7).jpg',            label: 'Scene 1',      emoji: '🖼️' },
-  { src: '/download (8).jpg',            label: 'Scene 2',      emoji: '🖼️' },
-  { src: '/download (9).jpg',            label: 'Scene 3',      emoji: '🖼️' },
-  { src: '/download (10).jpg',           label: 'Scene 4',      emoji: '🖼️' },
+interface GalleryItem {
+  src: string
+  label: string
+  emoji: string
+  // Optional per-image color adjustments applied before palette matching
+  redBoost?: number    // add to red channel (0–255)
+  greenBoost?: number
+  blueBoost?: number
+  saturation?: number  // multiply saturation (1 = normal, 1.5 = more vivid)
+}
+
+const GALLERY: GalleryItem[] = [
+  { src: '/GettyImages-1368865446.webp', label: 'Ice Skates', emoji: '⛸️' },
+  { src: '/skating.jpg',                 label: 'Skating',    emoji: '🛼' },
+  { src: '/forest.jpg',                  label: 'Forest',     emoji: '🌲', saturation: 1.3 },
+  { src: '/love.jpg',                    label: 'Love',       emoji: '💗', redBoost: 20, saturation: 1.2 },
+  { src: '/ruby.jpg',                    label: 'Ruby',       emoji: '💎', redBoost: 60, greenBoost: -20, blueBoost: -20, saturation: 1.6 },
+  { src: '/volleyball.jpg',              label: 'Volleyball', emoji: '🏐' },
+  { src: '/download (7).jpg',            label: 'Scene 1',    emoji: '🖼️' },
+  { src: '/download (8).jpg',            label: 'Scene 2',    emoji: '🖼️' },
+  { src: '/download (9).jpg',            label: 'Scene 3',    emoji: '🖼️' },
+  { src: '/download (10).jpg',           label: 'Scene 4',    emoji: '🖼️' },
 ]
 
 // ─────────────────────────────────────────────────────────────────
-// PALETTE — 15 colors covering most photo subjects
+// PALETTE — 20 colors
 // ─────────────────────────────────────────────────────────────────
 const PALETTE = [
   { n: 1,  hex: '#FFFFFF', label: 'White' },
@@ -41,6 +52,10 @@ const PALETTE = [
   { n: 18, hex: '#87CEEB', label: 'Sky Blue' },
   { n: 19, hex: '#4A6FA5', label: 'Blue' },
   { n: 20, hex: '#C94C63', label: 'Rose' },
+  { n: 21, hex: '#9B111E', label: 'Ruby Red' },
+  { n: 22, hex: '#E8735A', label: 'Coral' },
+  { n: 23, hex: '#FFD700', label: 'Gold' },
+  { n: 24, hex: '#9B7EC8', label: 'Lavender' },
 ]
 
 const COLS = 50
@@ -56,6 +71,8 @@ function hexToRgb(hex: string) {
   }
 }
 
+function clamp(v: number) { return Math.max(0, Math.min(255, Math.round(v))) }
+
 function closestColor(r: number, g: number, b: number): number {
   let best = PALETTE[0].n, bestDist = Infinity
   for (const p of PALETTE) {
@@ -64,6 +81,33 @@ function closestColor(r: number, g: number, b: number): number {
     if (d < bestDist) { bestDist = d; best = p.n }
   }
   return best
+}
+
+// Apply per-image color adjustments to pixel data
+function applyAdjustments(imgData: ImageData, item: GalleryItem): ImageData {
+  const { redBoost = 0, greenBoost = 0, blueBoost = 0, saturation = 1 } = item
+  if (redBoost === 0 && greenBoost === 0 && blueBoost === 0 && saturation === 1) return imgData
+
+  const data = new Uint8ClampedArray(imgData.data)
+  for (let i = 0; i < data.length; i += 4) {
+    let r = data[i], g = data[i + 1], b = data[i + 2]
+
+    // Saturation adjustment (via luminance)
+    if (saturation !== 1) {
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b
+      r = clamp(lum + (r - lum) * saturation)
+      g = clamp(lum + (g - lum) * saturation)
+      b = clamp(lum + (b - lum) * saturation)
+    }
+
+    // Channel boosts
+    r = clamp(r + redBoost)
+    g = clamp(g + greenBoost)
+    b = clamp(b + blueBoost)
+
+    data[i] = r; data[i + 1] = g; data[i + 2] = b
+  }
+  return new ImageData(data, imgData.width, imgData.height)
 }
 
 function buildGrid(imgData: ImageData, cols: number, rows: number): Cell[] {
@@ -109,7 +153,7 @@ export function ColorByNumbers() {
   const progress = grid.length > 0 ? Math.round((grid.filter(c => c.filled).length / grid.length) * 100) : 0
   const complete = progress === 100
 
-  const loadImage = useCallback((src: string, lbl: string) => {
+  const loadImage = useCallback((src: string, lbl: string, item?: GalleryItem) => {
     setLoading(true)
     setError('')
     const img = new Image()
@@ -122,7 +166,8 @@ export function ColorByNumbers() {
       const ctx = off.getContext('2d')!
       ctx.drawImage(img, 0, 0, off.width, off.height)
       try {
-        const imgData = ctx.getImageData(0, 0, off.width, off.height)
+        let imgData = ctx.getImageData(0, 0, off.width, off.height)
+        if (item) imgData = applyAdjustments(imgData, item)
         const aspect = off.width / off.height
         const gridCols = COLS
         const gridRows = Math.max(20, Math.round(COLS / aspect))
@@ -142,10 +187,10 @@ export function ColorByNumbers() {
   }, [])
 
   useEffect(() => {
-    loadImage(GALLERY[0].src, GALLERY[0].label)
+    loadImage(GALLERY[0].src, GALLERY[0].label, GALLERY[0])
   }, [loadImage])
 
-  // Draw grid
+  // Draw grid — improved line visibility
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas || grid.length === 0) return
@@ -153,26 +198,54 @@ export function ColorByNumbers() {
     const W = cols * CELL, H = rows * CELL
     canvas.width = W; canvas.height = H
     ctx.clearRect(0, 0, W, H)
+
     for (let row = 0; row < rows; row++) {
       for (let col = 0; col < cols; col++) {
         const cell = grid[row * cols + col]
         const x = col * CELL, y = row * CELL
+
         if (cell.filled && cell.color) {
           ctx.fillStyle = cell.color
+          ctx.fillRect(x, y, CELL, CELL)
         } else {
+          // Stronger tint of correct color
           const pc = hexToRgb(PALETTE.find(p => p.n === cell.n)?.hex || '#fff')
-          ctx.fillStyle = `rgba(${pc.r},${pc.g},${pc.b},0.22)`
+          ctx.fillStyle = `rgba(${pc.r},${pc.g},${pc.b},0.35)`
+          ctx.fillRect(x, y, CELL, CELL)
         }
-        ctx.fillRect(x, y, CELL, CELL)
-        ctx.strokeStyle = 'rgba(80,60,40,0.15)'
-        ctx.lineWidth = 0.4
-        ctx.strokeRect(x, y, CELL, CELL)
-        if (!cell.filled && showNumbers) {
-          ctx.fillStyle = 'rgba(40,25,15,0.7)'
-          ctx.font = 'bold 6px Arial'
-          ctx.textAlign = 'center'
-          ctx.textBaseline = 'middle'
-          ctx.fillText(String(cell.n), x + CELL / 2, y + CELL / 2)
+      }
+    }
+
+    // Draw grid lines in a single pass (much more visible)
+    ctx.strokeStyle = 'rgba(60,40,30,0.45)'
+    ctx.lineWidth = 0.8
+    ctx.beginPath()
+    for (let col = 0; col <= cols; col++) {
+      ctx.moveTo(col * CELL, 0)
+      ctx.lineTo(col * CELL, H)
+    }
+    for (let row = 0; row <= rows; row++) {
+      ctx.moveTo(0, row * CELL)
+      ctx.lineTo(W, row * CELL)
+    }
+    ctx.stroke()
+
+    // Draw numbers on top
+    if (showNumbers) {
+      ctx.font = 'bold 6px Arial'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      for (let row = 0; row < rows; row++) {
+        for (let col = 0; col < cols; col++) {
+          const cell = grid[row * cols + col]
+          if (!cell.filled) {
+            const x = col * CELL, y = row * CELL
+            // Dark outline for readability
+            ctx.fillStyle = 'rgba(255,255,255,0.7)'
+            ctx.fillText(String(cell.n), x + CELL / 2 + 0.5, y + CELL / 2 + 0.5)
+            ctx.fillStyle = 'rgba(30,15,10,0.85)'
+            ctx.fillText(String(cell.n), x + CELL / 2, y + CELL / 2)
+          }
         }
       }
     }
@@ -211,7 +284,7 @@ export function ColorByNumbers() {
 
   const pickGallery = (idx: number) => {
     setActiveGalleryIdx(idx)
-    loadImage(GALLERY[idx].src, GALLERY[idx].label)
+    loadImage(GALLERY[idx].src, GALLERY[idx].label, GALLERY[idx])
     setShowGallery(false)
   }
 
@@ -306,7 +379,7 @@ export function ColorByNumbers() {
             <canvas
               ref={canvasRef}
               onClick={handleClick}
-              style={{ borderRadius: 12, border: '1.5px solid rgba(201,76,99,0.2)', cursor: 'crosshair', display: 'block', maxWidth: '100%', imageRendering: 'pixelated' }}
+              style={{ borderRadius: 12, border: '2px solid rgba(201,76,99,0.3)', cursor: 'crosshair', display: 'block', maxWidth: '100%', imageRendering: 'pixelated' }}
             />
           )}
           {!loading && !error && (
