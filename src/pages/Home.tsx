@@ -84,7 +84,77 @@ export function Home({ onOpenCalm }: HomeProps) {
 
   return (
     <div className="relative min-h-screen">
-      {/* Falling leaves — behind everything */}
+      {/* ── Shader-doodle animated background ── */}
+      <div className="home-shader-bg" aria-hidden="true">
+        {/* @ts-ignore — shader-doodle is a web component */}
+        <shader-doodle>
+          <script type="x-shader/x-fragment">{`
+            precision mediump float;
+            uniform float u_time;
+            uniform vec2 u_resolution;
+
+            // Smooth noise
+            float hash(vec2 p) {
+              return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+            }
+            float noise(vec2 p) {
+              vec2 i = floor(p);
+              vec2 f = fract(p);
+              f = f * f * (3.0 - 2.0 * f);
+              return mix(
+                mix(hash(i), hash(i + vec2(1,0)), f.x),
+                mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x),
+                f.y
+              );
+            }
+            float fbm(vec2 p) {
+              float v = 0.0; float a = 0.5;
+              for (int i = 0; i < 5; i++) {
+                v += a * noise(p);
+                p *= 2.0; a *= 0.5;
+              }
+              return v;
+            }
+
+            void main() {
+              vec2 uv = gl_FragCoord.xy / u_resolution.xy;
+              float t = u_time * 0.12;
+
+              // Deep garnet / ruby base
+              vec3 garnet  = vec3(0.42, 0.06, 0.10);
+              vec3 ruby    = vec3(0.60, 0.10, 0.18);
+              vec3 crimson = vec3(0.72, 0.14, 0.22);
+              vec3 blush   = vec3(0.95, 0.78, 0.85);
+              vec3 dark    = vec3(0.18, 0.03, 0.06);
+
+              // Flowing noise layers
+              float n1 = fbm(uv * 2.8 + vec2(t * 0.6, t * 0.4));
+              float n2 = fbm(uv * 1.6 + vec2(-t * 0.3, t * 0.5) + n1 * 0.6);
+              float n3 = fbm(uv * 4.0 + vec2(t * 0.2, -t * 0.7) + n2 * 0.4);
+
+              // Radial vignette — darker at edges
+              float dist = length(uv - 0.5) * 1.4;
+              float vignette = 1.0 - smoothstep(0.3, 1.0, dist);
+
+              // Mix colours
+              vec3 col = mix(dark, garnet, n1);
+              col = mix(col, ruby, n2 * 0.7);
+              col = mix(col, crimson, n3 * 0.4);
+              col = mix(col, blush, n3 * n1 * 0.15);
+              col *= vignette;
+
+              // Subtle shimmer
+              float shimmer = noise(uv * 12.0 + t * 2.0) * 0.06;
+              col += shimmer * vec3(1.0, 0.6, 0.7);
+
+              gl_FragColor = vec4(col, 1.0);
+            }
+          `}</script>
+        {/* @ts-ignore */}
+        </shader-doodle>
+      </div>
+
+      {/* Falling leaves — behind content */}
       <FallingLeaves />
 
       <div className="relative z-10 space-y-7 pb-8">
@@ -96,25 +166,20 @@ export function Home({ onOpenCalm }: HomeProps) {
           transition={{ duration: 0.6, ease: 'easeOut' }}
           className="relative rounded-3xl overflow-hidden px-6 py-8 text-center"
           style={{
-            background: 'linear-gradient(160deg, rgba(255,247,239,0.92) 0%, rgba(250,218,221,0.88) 50%, rgba(168,198,134,0.15) 100%)',
+            background: 'linear-gradient(160deg, rgba(255,247,239,0.82) 0%, rgba(250,218,221,0.78) 50%, rgba(168,198,134,0.12) 100%)',
             border: '1.5px solid rgba(248,200,220,0.5)',
-            boxShadow: '0 8px 40px rgba(155,17,30,0.12)',
-            backdropFilter: 'blur(12px)',
+            boxShadow: '0 8px 40px rgba(155,17,30,0.18)',
+            backdropFilter: 'blur(18px)',
           }}
         >
-          {/* Decorative ruby gem */}
-          <motion.div
-            animate={{ y: [0, -8, 0], rotate: [45, 48, 45] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-2xl text-3xl"
-            style={{
-              background: 'linear-gradient(135deg, #9B111E, #C94C63)',
-              boxShadow: '0 8px 32px rgba(155,17,30,0.45), 0 0 60px rgba(201,76,99,0.2)',
-              transform: 'rotate(45deg)',
-            }}
-          >
-            <span style={{ transform: 'rotate(-45deg)', display: 'block' }}>💎</span>
-          </motion.div>
+          {/* Garnet ruby gem */}
+          <div className="flex justify-center mb-6" style={{ minHeight: 90 }}>
+            <div
+              className="garnet-ruby"
+              onClick={onOpenCalm}
+              title="Open calm space"
+            />
+          </div>
 
           <motion.h1
             initial={{ opacity: 0, y: 8 }}

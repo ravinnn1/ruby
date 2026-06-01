@@ -315,3 +315,79 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
 
 /* ── Reduced motion class (user toggle) ────────────────────── */
 .reduce-motion * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+
+/* ── Garnet Ruby Gem ────────────────────────────────────────── */
+/* Deep garnet: #7B1A1A base, facets layered with CSS gradients  */
+.garnet-ruby {
+  display: block;
+  width: 120px;
+  height: 120px;
+  position: relative;
+  background: rgba(255,255,255,0);
+  cursor: pointer;
+  background-image:
+    linear-gradient(-45deg, rgba(255,255,0,.10) 21.2%, rgba(255,0,0,.15) 71.2%, rgba(0,0,0,0) 71.2%),
+    linear-gradient(22.6deg, rgba(100,10,10,.35) 30%, rgba(0,0,0,0) 30%),
+    linear-gradient(67.8deg, rgba(0,0,0,0) 70%, rgba(80,5,5,.45) 70%),
+    linear-gradient(-45deg, rgba(139,20,20,.55) 71.2%, rgba(0,0,0,0) 71.2%),
+    linear-gradient(-45deg, rgba(100,10,10,1) 50%, rgba(0,0,0,0) 50%);
+  transform: rotate(45deg);
+  box-shadow:
+    6px 6px 8px rgba(0,0,0,.22),
+    inset -4px -4px 6px rgba(255,255,255,.12),
+    inset -3px -3px rgba(80,5,5,.2);
+  transition: .6s all;
+}
+.garnet-ruby:hover {
+  transform: rotate(45deg) translate(-6px, -6px);
+  box-shadow:
+    14px 14px 18px rgba(0,0,0,.28),
+    inset -4px -4px 6px rgba(255,255,255,.15),
+    inset -3px -3px rgba(80,5,5,.6);
+  transition: .4s all;
+}
+.garnet-ruby:active {
+  transform: rotate(45deg) translate(-2px, -2px);
+  box-shadow:
+    4px 4px 8px rgba(0,0,0,.14),
+    inset -4px -4px 6px rgba(255,255,255,.12),
+    inset -3px -3px rgba(80,5,5,.6);
+}
+.garnet-ruby::before {
+  content: "Ruby";
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1em;
+  color: rgba(255,220,220,.75);
+  position: absolute;
+  left: 25%;
+  transform: rotate(-45deg) translate(-90%, 400%);
+  z-index: 2;
+  text-shadow: 0 1px 2px rgba(60,0,0,.6);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .04em;
+}
+.garnet-ruby::after {
+  content: "";
+  display: block;
+  width: 0;
+  height: 0;
+  border-width: 35px 36px;
+  border-style: solid;
+  border-color: transparent rgba(139,20,20,.45) transparent transparent;
+  transform: rotate(45deg) translateY(2px);
+}
+
+/* Shader-doodle home background */
+.home-shader-bg {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+}
+.home-shader-bg shader-doodle {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
