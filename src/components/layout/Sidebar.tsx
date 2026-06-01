@@ -44,7 +44,6 @@ const navSections = [
     label: 'Play',
     color: '#6F8F5F',
     items: [
-      { to: '/distraction', emoji: '🎮', label: 'Distraction' },
       { to: '/games',       emoji: '🫧', label: 'Soft Games' },
       { to: '/arcade',      emoji: '🕹️', label: 'Arcade' },
       { to: '/color',       emoji: '🎨', label: 'Color by Numbers' },
@@ -66,20 +65,20 @@ const sectionPillStyle = (color: string) => ({
 })
 
 export function Sidebar() {
-  const linkClass = (isActive: boolean) =>
-    `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group ${
-      isActive
-        ? 'bg-[#B83A55]/12 text-[#8B0D1A] font-semibold'
-        : 'text-[#6B5560] hover:bg-[#F2A8C8]/25 hover:text-[#2E1F25]'
-    }`
+  // Use inline styles for text so CSS vars can override them
+  const linkBaseClass = 'relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group'
+  const linkClass = (isActive: boolean) => linkBaseClass + (isActive ? ' font-semibold' : '')
+  const linkStyle = (isActive: boolean): React.CSSProperties => isActive
+    ? { background: 'rgba(var(--theme-accent-rgb, 184,58,85),0.1)', color: 'var(--theme-text-primary, #3A2A2F)' }
+    : { color: 'var(--theme-text-muted, #6B5560)' }
 
   return (
     <aside
       className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-30 overflow-y-auto"
       style={{
-        background: 'rgba(255,245,236,0.95)',
+        background: 'var(--theme-sidebar-bg, rgba(255,245,236,0.95))',
         backdropFilter: 'blur(20px)',
-        borderRight: '1.5px solid rgba(242,168,200,0.4)',
+        borderRight: '1.5px solid var(--theme-sidebar-border, rgba(242,168,200,0.4))',
         boxShadow: '4px 0 32px rgba(46,31,37,0.07)',
       }}
     >
@@ -125,6 +124,7 @@ export function Sidebar() {
                   to={to}
                   end={to === '/'}
                   className={({ isActive }) => linkClass(isActive)}
+                  style={({ isActive }) => linkStyle(isActive)}
                   aria-label={label}
                 >
                   {({ isActive }) => (

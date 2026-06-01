@@ -14,6 +14,7 @@ interface GalleryItem {
   blueBoost?: number
   saturation?: number  // multiply saturation (1 = normal, 1.5 = more vivid)
   cols?: number        // override grid column count for higher resolution
+  cropTop?: number     // fraction of image height to crop from top (0–1)
 }
 
 const GALLERY: GalleryItem[] = [
@@ -27,7 +28,7 @@ const GALLERY: GalleryItem[] = [
   { src: '/download (8).jpg',            label: 'Flowers',    emoji: '🌸' },
   { src: '/download (9).jpg',            label: 'Landscape',  emoji: '🏞️' },
   { src: '/download (10).jpg',           label: 'Cottage',    emoji: '🏡' },
-  { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4, cols: 70 },
+  { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4, cols: 70, cropTop: 0.20 },
 ]
 
 // ─────────────────────────────────────────────────────────────────
@@ -172,11 +173,14 @@ export function ColorByNumbers() {
     img.onload = () => {
       const off = document.createElement('canvas')
       const maxDim = 600
-      const scale = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight, 1)
+      const cropFrac = item?.cropTop ?? 0
+      const srcY = Math.round(img.naturalHeight * cropFrac)
+      const srcH = img.naturalHeight - srcY
+      const scale = Math.min(maxDim / img.naturalWidth, maxDim / srcH, 1)
       off.width = Math.round(img.naturalWidth * scale)
-      off.height = Math.round(img.naturalHeight * scale)
+      off.height = Math.round(srcH * scale)
       const ctx = off.getContext('2d')!
-      ctx.drawImage(img, 0, 0, off.width, off.height)
+      ctx.drawImage(img, 0, srcY, img.naturalWidth, srcH, 0, 0, off.width, off.height)
       try {
         let imgData = ctx.getImageData(0, 0, off.width, off.height)
         if (item) imgData = applyAdjustments(imgData, item)

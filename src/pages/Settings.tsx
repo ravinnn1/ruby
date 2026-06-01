@@ -19,6 +19,9 @@ const themes = [
     cardBorder: 'rgba(248,200,220,0.5)',
     textPrimary: '#3A2A2F',
     textMuted: '#7A6670',
+    sidebarBg: 'rgba(255,245,236,0.95)',
+    sidebarBorder: 'rgba(242,168,200,0.4)',
+    bodyBg: '#FFF7EF',
     badge: 'bg-[#F8C8DC] text-[#9B111E]',
   },
   {
@@ -32,6 +35,9 @@ const themes = [
     cardBorder: 'rgba(168,198,134,0.55)',
     textPrimary: '#1E3020',
     textMuted: '#4A6B3A',
+    sidebarBg: 'rgba(240,252,234,0.97)',
+    sidebarBorder: 'rgba(168,198,134,0.4)',
+    bodyBg: '#F5FFF0',
     badge: 'bg-[#D4EBC4] text-[#2E5020]',
   },
   {
@@ -45,6 +51,9 @@ const themes = [
     cardBorder: 'rgba(232,163,184,0.45)',
     textPrimary: '#3D2218',
     textMuted: '#8B5E52',
+    sidebarBg: 'rgba(255,248,238,0.97)',
+    sidebarBorder: 'rgba(232,163,184,0.4)',
+    bodyBg: '#FFFBF5',
     badge: 'bg-[#F5D5C8] text-[#7A3828]',
   },
   {
@@ -58,11 +67,30 @@ const themes = [
     cardBorder: 'rgba(155,17,30,0.45)',
     textPrimary: '#F5D8E0',
     textMuted: '#C4909A',
+    sidebarBg: 'rgba(18,5,10,0.97)',
+    sidebarBorder: 'rgba(155,17,30,0.35)',
+    bodyBg: '#0D0508',
     badge: 'bg-[#3D0F1A] text-[#F5A0B0]',
+  },
+  {
+    id: 'aurora-gradient',
+    label: 'Aurora',
+    desc: 'Animated shifting colors',
+    preview: ['#ee7752', '#e73c7e', '#23a6d5'],
+    bg: 'linear-gradient(135deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)',
+    accent: '#e73c7e',
+    cardBg: 'rgba(255,255,255,0.15)',
+    cardBorder: 'rgba(255,255,255,0.25)',
+    textPrimary: '#ffffff',
+    textMuted: 'rgba(255,255,255,0.75)',
+    sidebarBg: 'rgba(20,10,30,0.85)',
+    sidebarBorder: 'rgba(231,60,126,0.3)',
+    bodyBg: '#1a0a1e',
+    badge: 'bg-white/20 text-white',
   },
 ]
 
-// Apply theme to document
+// Apply theme to document — sets CSS vars AND body/html colors for full coverage
 function applyTheme(id: string) {
   document.documentElement.setAttribute('data-theme', id)
   const t = themes.find(t => t.id === id)
@@ -74,6 +102,21 @@ function applyTheme(id: string) {
   root.setProperty('--theme-card-border', t.cardBorder)
   root.setProperty('--theme-text-primary', t.textPrimary)
   root.setProperty('--theme-text-muted', t.textMuted)
+  root.setProperty('--theme-sidebar-bg', t.sidebarBg)
+  root.setProperty('--theme-sidebar-border', t.sidebarBorder)
+  // Apply body background and text color directly so ALL text is readable
+  document.body.style.backgroundColor = t.bodyBg
+  document.body.style.color = t.textPrimary
+  // Aurora: animated gradient background
+  if (id === 'aurora-gradient') {
+    document.body.style.background = 'linear-gradient(135deg, #ee7752, #e73c7e, #23a6d5, #23d5ab)'
+    document.body.style.backgroundSize = '400% 400%'
+    document.body.style.animation = 'auroraShift 12s ease infinite'
+  } else {
+    document.body.style.background = ''
+    document.body.style.backgroundSize = ''
+    document.body.style.animation = ''
+  }
 }
 
 const ts = { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' }

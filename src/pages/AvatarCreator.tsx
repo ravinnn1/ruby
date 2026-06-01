@@ -141,16 +141,29 @@ export function AvatarCreator() {
   const handleSave = async () => {
     if (!user) return
     setSaving(true)
-    const { error } = await supabase.from('profiles').upsert({
-      id: user.id,
-      avatar_config: config,
-      updated_at: new Date().toISOString(),
-    })
+    // First check if profile row exists
+    const { data: existing } = await supabase.from('profiles').select('id').eq('id', user.id).single()
+    let error
+    if (existing) {
+      const res = await supabase.from('profiles').update({
+        avatar_config: config,
+        updated_at: new Date().toISOString(),
+      }).eq('id', user.id)
+      error = res.error
+    } else {
+      const res = await supabase.from('profiles').insert({
+        id: user.id,
+        avatar_config: config,
+        updated_at: new Date().toISOString(),
+      })
+      error = res.error
+    }
     setSaving(false)
     if (!error) {
       toast.success('Avatar saved! 💎', { style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' } })
     } else {
-      toast.error('Could not save. Try again.')
+      console.error('Avatar save error:', error)
+      toast.error(`Could not save: ${error.message}`)
     }
   }
 

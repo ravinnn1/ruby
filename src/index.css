@@ -228,6 +228,12 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
   100% { background-position: 0% 50%; }
 }
 
+@keyframes auroraShift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 @keyframes blobDrift1 {
   0%,100% { transform: translate(0,0) scale(1); }
   33%     { transform: translate(5vw, 8vh) scale(1.08); }
