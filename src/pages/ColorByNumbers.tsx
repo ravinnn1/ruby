@@ -26,7 +26,7 @@ const GALLERY: GalleryItem[] = [
   { src: '/download (8).jpg',            label: 'Flowers',    emoji: '🌸' },
   { src: '/download (9).jpg',            label: 'Landscape',  emoji: '🏞️' },
   { src: '/download (10).jpg',           label: 'Cottage',    emoji: '🏡' },
-  { src: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4 },
+  { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4 },
 ]
 
 // ─────────────────────────────────────────────────────────────────
