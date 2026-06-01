@@ -48,14 +48,26 @@ export function SecretLetter() {
   return (
     <>
       {/* Floating envelope button — bottom right, above calm button */}
+      {/* mobile: above bottom-nav(~64px) + calm-btn(~52px) + gap = ~10rem  */}
+      {/* desktop lg: calm-btn is at bottom-8(32px), so envelope at ~5rem   */}
+      <style>{`
+        .secret-letter-btn {
+          bottom: calc(10rem + env(safe-area-inset-bottom, 0px));
+          right: 1rem;
+        }
+        @media (min-width: 1024px) {
+          .secret-letter-btn {
+            bottom: 5rem;
+            right: 2rem;
+          }
+        }
+      `}</style>
       <motion.button
         onClick={handleOpen}
-        className="fixed z-40 flex items-center justify-center"
+        className="secret-letter-btn fixed z-40 flex items-center justify-center"
         style={{
-          bottom: 'calc(5.5rem + env(safe-area-inset-bottom, 0px))',
-          right: '1.25rem',
-          width: 52,
-          height: 52,
+          width: 48,
+          height: 48,
           borderRadius: '50%',
           background: 'linear-gradient(135deg, #9B111E, #C94C63)',
           boxShadow: '0 4px 20px rgba(155,17,30,0.45), 0 2px 8px rgba(0,0,0,0.12)',
