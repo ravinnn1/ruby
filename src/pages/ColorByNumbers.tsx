@@ -18,16 +18,17 @@ interface GalleryItem {
 }
 
 const GALLERY: GalleryItem[] = [
-  { src: '/GettyImages-1368865446.webp', label: 'Ice Skates', emoji: '⛸️' },
-  { src: '/skating.jpg',                 label: 'Skating',    emoji: '🛼' },
-  { src: '/forest.jpg',                  label: 'Forest',     emoji: '🌲', saturation: 1.3 },
-  { src: '/love.jpg',                    label: 'Love',       emoji: '💗', redBoost: 20, saturation: 1.2 },
-  { src: '/ruby.jpg',                    label: 'Ruby',       emoji: '💎', redBoost: 60, greenBoost: -20, blueBoost: -20, saturation: 1.6 },
-  { src: '/volleyball.jpg',              label: 'Volleyball', emoji: '🏐' },
-  { src: '/download (7).jpg',            label: 'Sunset',     emoji: '🌅' },
-  { src: '/download (8).jpg',            label: 'Flowers',    emoji: '🌸' },
-  { src: '/download (9).jpg',            label: 'Landscape',  emoji: '🏞️' },
-  { src: '/download (10).jpg',           label: 'Cottage',    emoji: '🏡' },
+  { src: '/Professional Skating.webp',   label: 'Ice Skates',  emoji: '⛸️' },
+  { src: '/Skating.jpg',                 label: 'Skating',     emoji: '🛼' },
+  { src: '/skates.jpg',                  label: 'Skates',      emoji: '⛸️' },
+  { src: '/Pink Skates.jpg',             label: 'Pink Skates', emoji: '🩷' },
+  { src: '/Forest.jpg',                  label: 'Forest',      emoji: '🌲', saturation: 1.3 },
+  { src: '/Love.jpg',                    label: 'Love',        emoji: '💗', redBoost: 20, saturation: 1.2 },
+  { src: '/Ruby.jpg',                    label: 'Ruby',        emoji: '💎', redBoost: 60, greenBoost: -20, blueBoost: -20, saturation: 1.6 },
+  { src: '/Volleyball.jpg',              label: 'Volleyball',  emoji: '🏐' },
+  { src: '/Ice Skating.jpg',             label: 'Ice Skating', emoji: '🏒' },
+  { src: '/Ballerina.jpg',               label: 'Ballerina',   emoji: '🩰' },
+  { src: '/Boots.jpg',                   label: 'Boots',       emoji: '👢' },
   { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4, cols: 70, cropTop: 0.20 },
 ]
 
