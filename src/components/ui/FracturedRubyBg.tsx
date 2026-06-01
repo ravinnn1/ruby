@@ -169,7 +169,15 @@ export function FracturedRubyBg({ className = '' }: { className?: string }) {
     <canvas
       ref={canvasRef}
       className={className}
-      style={{ display: 'block', width: '100%', height: '100%' }}
+      style={{
+        display: 'block',
+        position: 'fixed',
+        inset: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 0,
+        pointerEvents: 'none',
+      }}
     />
   )
 }
