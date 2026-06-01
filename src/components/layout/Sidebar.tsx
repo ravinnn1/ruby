@@ -15,6 +15,7 @@ const navSections = [
       { to: '/calendar',  emoji: '📅', label: 'Calendar' },
       { to: '/draw',      emoji: '🎨', label: 'Draw' },
       { to: '/avatar',    emoji: '🪞', label: 'Avatar Creator' },
+      { to: '/moose',     emoji: '🐾', label: 'Moose' },
     ],
   },
   {

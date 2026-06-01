@@ -26,6 +26,7 @@ const GALLERY: GalleryItem[] = [
   { src: '/download (8).jpg',            label: 'Scene 2',    emoji: '🖼️' },
   { src: '/download (9).jpg',            label: 'Scene 3',    emoji: '🖼️' },
   { src: '/download (10).jpg',           label: 'Scene 4',    emoji: '🖼️' },
+  { src: '/moose.jpg',                   label: 'Moose 🐾',   emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4 },
 ]
 
 // ─────────────────────────────────────────────────────────────────
