@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
+import { AirHockey } from '../components/games/AirHockey'
+import { SpellCaster } from '../components/games/SpellCaster'
 
 // ── Bubble Pop game ──────────────────────────────────────────────
 interface Bubble { id: number; x: number; y: number; size: number; color: string; popped: boolean }
@@ -250,10 +252,12 @@ function TapHearts() {
 
 // ── Main Games page ──────────────────────────────────────────────
 const GAMES = [
-  { id: 'bubbles',   label: 'Bubble Pop',      emoji: '🫧', desc: 'Pop the floating bubbles',       component: BubblePop },
-  { id: 'gems',      label: 'Gem Collector',   emoji: '💎', desc: 'Catch falling gems',             component: GemCollector },
-  { id: 'breathing', label: 'Breathing Orb',   emoji: '🌸', desc: 'Follow the orb to breathe',     component: BreathingGame },
-  { id: 'hearts',    label: 'Tap the Hearts',  emoji: '💗', desc: 'Collect all the little hearts',  component: TapHearts },
+  { id: 'airhockey',   label: 'Air Hockey',      emoji: '🏒', desc: 'Beat the CPU. First to 7 wins.',    component: AirHockey },
+  { id: 'spellcaster', label: 'Spell Caster',    emoji: '✨', desc: 'Draw shapes to cast spells.',       component: SpellCaster },
+  { id: 'bubbles',     label: 'Bubble Pop',      emoji: '🫧', desc: 'Pop the floating bubbles',          component: BubblePop },
+  { id: 'gems',        label: 'Gem Collector',   emoji: '💎', desc: 'Catch falling gems',                component: GemCollector },
+  { id: 'breathing',   label: 'Breathing Orb',   emoji: '🌸', desc: 'Follow the orb to breathe',        component: BreathingGame },
+  { id: 'hearts',      label: 'Tap the Hearts',  emoji: '💗', desc: 'Collect all the little hearts',     component: TapHearts },
 ]
 
 export function Games() {
