@@ -23,6 +23,8 @@ const navSections = [
     items: [
       { to: '/vault',    emoji: '🔮', label: 'Comfort Vault' },
       { to: '/letters',  emoji: '✉️',  label: 'Letters' },
+      { to: '/vent',     emoji: '🕊️', label: 'Let It Out' },
+      { to: '/voice',    emoji: '🎙️', label: 'Voice Memos' },
       { to: '/routines', emoji: '🌿', label: 'Routines' },
       { to: '/budget',   emoji: '🌷', label: 'Soft Budget' },
     ],

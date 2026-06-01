@@ -30,6 +30,8 @@ import { AvatarCreator } from './pages/AvatarCreator'
 import { Calendar } from './pages/Calendar'
 import { ArcadeGames } from './pages/ArcadeGames'
 import { ColorByNumbers } from './pages/ColorByNumbers'
+import { Vent } from './pages/Vent'
+import { VoiceMemos } from './pages/VoiceMemos'
 
 const toastStyle = {
   background: '#FFF7EF',
@@ -97,6 +99,8 @@ function AppRoutes() {
         <Route path="/calendar" element={<Calendar />} />
         <Route path="/color" element={<ColorByNumbers />} />
         <Route path="/avatar" element={<AvatarCreator />} />
+        <Route path="/vent" element={<Vent />} />
+        <Route path="/voice" element={<VoiceMemos />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="*" element={<Navigate to="/" replace />} />
