@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { FloatingCalmButton } from './FloatingCalmButton'
 import { CalmOverlay } from '../calm/CalmOverlay'
@@ -13,8 +13,6 @@ interface AppShellProps {
 export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellProps) {
   const [bannerDismissed, setBannerDismissed] = useState(false)
   const [internalCalmOpen, setInternalCalmOpen] = useState(false)
-  const location = useLocation()
-  const isHome = location.pathname === '/'
 
   const calmOpen = externalCalmOpen || internalCalmOpen
   const handleCalmClose = () => {
@@ -23,7 +21,7 @@ export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellPr
   }
 
   return (
-    <div className={`min-h-screen ${isHome ? '' : 'gradient-bg'}`}>
+    <div className="min-h-screen gradient-bg">
       {/* Supabase not-configured banner */}
       {!supabaseConfigured && !bannerDismissed && (
         <div
