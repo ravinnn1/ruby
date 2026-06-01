@@ -51,10 +51,10 @@ export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellPr
 
       {/* Main content */}
       <main
-        className="lg:ml-64 min-h-screen pb-8"
+        className="lg:ml-64 min-h-screen pb-8 flex justify-center"
         style={{ paddingTop: !supabaseConfigured && !bannerDismissed ? '2.5rem' : undefined }}
       >
-        <div className="max-w-3xl mx-auto px-4 py-6">
+        <div className="w-full max-w-2xl px-4 py-6">
           <Outlet />
         </div>
       </main>

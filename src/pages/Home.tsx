@@ -359,76 +359,67 @@ export function Home({ onOpenCalm }: HomeProps) {
               <span className="text-[10px] font-semibold text-[#9B111E] tracking-widest uppercase">{dateStr}</span>
             </motion.div>
 
-            {/* Ruby gem — breathing orb */}
-            <div className="flex justify-center mb-5">
-              <motion.button
+            {/* Ruby gem — original CSS diamond style */}
+            <style>{`
+              .home-ruby {
+                display: block;
+                width: 120px;
+                height: 120px;
+                position: relative;
+                background: rgba(255,255,255,0);
+                background-image:
+                  linear-gradient(-45deg, rgba(255,255,0,.10) 21.2%, rgba(255,0,0,.15) 71.2%, rgba(0,0,0,0) 71.2%),
+                  linear-gradient(22.6deg, rgba(100,10,10,.35) 30%, rgba(0,0,0,0) 30%),
+                  linear-gradient(67.8deg, rgba(0,0,0,0) 70%, rgba(80,5,5,.45) 70%),
+                  linear-gradient(-45deg, rgba(139,20,20,.55) 71.2%, rgba(0,0,0,0) 71.2%),
+                  linear-gradient(-45deg, rgba(100,10,10,1) 50%, rgba(0,0,0,0) 50%);
+                transform: rotate(45deg);
+                box-shadow:
+                  6px 6px 8px rgba(0,0,0,.22),
+                  inset -4px -4px 6px rgba(255,255,255,.12),
+                  inset -3px -3px rgba(80,5,5,.2);
+                transition: .6s all;
+                margin: 0 auto;
+                cursor: pointer;
+              }
+              .home-ruby:hover {
+                transform: rotate(45deg) translate(-6px,-6px);
+                box-shadow:
+                  14px 14px 18px rgba(0,0,0,.28),
+                  inset -4px -4px 6px rgba(255,255,255,.15),
+                  inset -3px -3px rgba(80,5,5,.6);
+                transition: .4s all;
+              }
+              .home-ruby::after {
+                content: "";
+                display: block;
+                width: 0;
+                height: 0;
+                border-width: 35px 36px;
+                border-style: solid;
+                border-color: transparent rgba(139,20,20,.45) transparent transparent;
+                transform: rotate(45deg) translateY(2px);
+              }
+            `}</style>
+            <motion.div
+              className="flex justify-center mb-5"
+              animate={prefersReduced ? {} : {
+                filter: checkIn === 'overwhelming'
+                  ? ['drop-shadow(0 0 16px rgba(155,17,30,0.6))', 'drop-shadow(0 0 28px rgba(155,17,30,0.85))', 'drop-shadow(0 0 16px rgba(155,17,30,0.6))']
+                  : checkIn === 'heavy'
+                  ? ['drop-shadow(0 0 10px rgba(201,76,99,0.5))', 'drop-shadow(0 0 20px rgba(201,76,99,0.7))', 'drop-shadow(0 0 10px rgba(201,76,99,0.5))']
+                  : ['drop-shadow(0 0 6px rgba(155,17,30,0.3))', 'drop-shadow(0 0 14px rgba(155,17,30,0.5))', 'drop-shadow(0 0 6px rgba(155,17,30,0.3))'],
+              }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <div
+                className="home-ruby"
                 onClick={onOpenCalm}
+                title="Open calm space"
+                role="button"
                 aria-label="Open calm space"
-                title="Open your calm space"
-                className="relative focus:outline-none"
-                whileHover={prefersReduced ? {} : { scale: 1.08 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                {/* Outer glow rings */}
-                {!prefersReduced && (
-                  <>
-                    <motion.div className="absolute inset-0 rounded-full pointer-events-none"
-                      style={{ background: 'radial-gradient(circle, rgba(155,17,30,0.25) 0%, transparent 70%)', transform: 'scale(1.8)' }}
-                      animate={{ scale: [1.8, 2.2, 1.8], opacity: [0.4, 0.1, 0.4] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    />
-                    <motion.div className="absolute inset-0 rounded-full pointer-events-none"
-                      style={{ background: 'radial-gradient(circle, rgba(201,76,99,0.2) 0%, transparent 70%)', transform: 'scale(1.4)' }}
-                      animate={{ scale: [1.4, 1.7, 1.4], opacity: [0.5, 0.15, 0.5] }}
-                      transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut', delay: 0.5 }}
-                    />
-                  </>
-                )}
-                {/* The gem itself */}
-                <motion.div
-                  className="relative"
-                  style={{ width: 110, height: 110 }}
-                  animate={prefersReduced ? {} : {
-                    scale: [1, 1.04, 1],
-                    filter: checkIn === 'overwhelming'
-                      ? ['drop-shadow(0 0 16px rgba(155,17,30,0.7))', 'drop-shadow(0 0 28px rgba(155,17,30,0.9))', 'drop-shadow(0 0 16px rgba(155,17,30,0.7))']
-                      : checkIn === 'heavy'
-                      ? ['drop-shadow(0 0 12px rgba(201,76,99,0.6))', 'drop-shadow(0 0 22px rgba(201,76,99,0.8))', 'drop-shadow(0 0 12px rgba(201,76,99,0.6))']
-                      : ['drop-shadow(0 0 8px rgba(155,17,30,0.4))', 'drop-shadow(0 0 18px rgba(155,17,30,0.6))', 'drop-shadow(0 0 8px rgba(155,17,30,0.4))'],
-                  }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                >
-                  <svg viewBox="0 0 110 110" width="110" height="110" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                      <radialGradient id="gemGrad" cx="35%" cy="30%" r="70%">
-                        <stop offset="0%" stopColor="#E8435A" />
-                        <stop offset="40%" stopColor="#9B111E" />
-                        <stop offset="100%" stopColor="#4A0810" />
-                      </radialGradient>
-                      <radialGradient id="gemShine" cx="25%" cy="20%" r="50%">
-                        <stop offset="0%" stopColor="rgba(255,255,255,0.45)" />
-                        <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-                      </radialGradient>
-                    </defs>
-                    {/* Main gem shape — octagon */}
-                    <polygon points="55,8 85,22 98,52 85,82 55,96 25,82 12,52 25,22" fill="url(#gemGrad)" />
-                    {/* Facets */}
-                    <polygon points="55,8 85,22 55,42" fill="rgba(255,100,100,0.18)" />
-                    <polygon points="85,22 98,52 72,42" fill="rgba(0,0,0,0.15)" />
-                    <polygon points="55,42 85,22 72,42 55,62" fill="rgba(255,80,80,0.12)" />
-                    <polygon points="55,42 25,22 38,42" fill="rgba(255,150,150,0.1)" />
-                    <polygon points="12,52 25,22 38,42 28,62" fill="rgba(0,0,0,0.1)" />
-                    <polygon points="55,62 28,62 25,82 55,96" fill="rgba(0,0,0,0.2)" />
-                    <polygon points="55,62 72,42 98,52 82,62" fill="rgba(0,0,0,0.12)" />
-                    <polygon points="55,62 82,62 85,82 55,96" fill="rgba(0,0,0,0.18)" />
-                    {/* Shine overlay */}
-                    <polygon points="55,8 85,22 55,42 25,22" fill="url(#gemShine)" />
-                    {/* Small highlight */}
-                    <ellipse cx="42" cy="28" rx="8" ry="5" fill="rgba(255,255,255,0.22)" transform="rotate(-20,42,28)" />
-                  </svg>
-                </motion.div>
-              </motion.button>
-            </div>
+              />
+            </motion.div>
 
             <motion.h1 {...fadeUp(0.2)} className="font-display text-4xl text-[#3A2A2F] mb-1">
               Hi Ruby.
