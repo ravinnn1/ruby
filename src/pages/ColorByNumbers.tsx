@@ -22,11 +22,11 @@ const GALLERY: GalleryItem[] = [
   { src: '/love.jpg',                    label: 'Love',       emoji: '💗', redBoost: 20, saturation: 1.2 },
   { src: '/ruby.jpg',                    label: 'Ruby',       emoji: '💎', redBoost: 60, greenBoost: -20, blueBoost: -20, saturation: 1.6 },
   { src: '/volleyball.jpg',              label: 'Volleyball', emoji: '🏐' },
-  { src: '/download (7).jpg',            label: 'Scene 1',    emoji: '🖼️' },
-  { src: '/download (8).jpg',            label: 'Scene 2',    emoji: '🖼️' },
-  { src: '/download (9).jpg',            label: 'Scene 3',    emoji: '🖼️' },
-  { src: '/download (10).jpg',           label: 'Scene 4',    emoji: '🖼️' },
-  { src: '/moose.jpg',                   label: 'Moose 🐾',   emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4 },
+  { src: '/download (7).jpg',            label: 'Sunset',     emoji: '🌅' },
+  { src: '/download (8).jpg',            label: 'Flowers',    emoji: '🌸' },
+  { src: '/download (9).jpg',            label: 'Landscape',  emoji: '🏞️' },
+  { src: '/download (10).jpg',           label: 'Cottage',    emoji: '🏡' },
+  { src: 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4 },
 ]
 
 // ─────────────────────────────────────────────────────────────────
@@ -184,6 +184,8 @@ export function ColorByNumbers() {
       }
     }
     img.onerror = () => { setError('Failed to load image.'); setLoading(false) }
+    // Allow cross-origin images (e.g. Unsplash)
+    if (src.startsWith('http')) img.crossOrigin = 'anonymous'
     img.src = src
   }, [])
 
