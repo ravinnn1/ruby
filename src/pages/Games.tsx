@@ -16,6 +16,8 @@ function BubblePop() {
   const nextId = useRef(0)
   const popId = useRef(0)
 
+  // Sky occupies top ~42% of the 320px arena = ~134px
+  // Bubbles spawn in sky zone only (y: 5% – 38%)
   useEffect(() => {
     const spawn = () => {
       const size = 38 + Math.random() * 42
@@ -23,10 +25,10 @@ function BubblePop() {
         ...prev.filter(b => !b.popped).slice(-20),
         {
           id: nextId.current++,
-          x: 4 + Math.random() * 88,
-          y: 4 + Math.random() * 88,
+          x: 5 + Math.random() * 86,
+          y: 5 + Math.random() * 33,   // sky only: 5%–38%
           size,
-          hue: Math.random() * 60 + 180, // blue-green range for realistic bubbles
+          hue: Math.random() * 60 + 180,
           popped: false,
         },
       ])
@@ -84,20 +86,18 @@ function BubblePop() {
             <div style={{ position: 'absolute', bottom: 5, left: 10, width: 30, height: 20, borderRadius: 16, background: 'rgba(255,255,255,0.85)' }} />
           </div>
         </div>
-        {/* Trees */}
-        {[8, 22, 72, 86].map((lp, i) => (
-          <div key={i} style={{ position: 'absolute', bottom: 0, left: `${lp}%`, pointerEvents: 'none' }}>
-            <div style={{ width: 8, height: 28 + i * 4, background: '#6B4226', margin: '0 auto' }} />
-            <div style={{ width: 0, height: 0, borderLeft: `${18 + i * 3}px solid transparent`, borderRight: `${18 + i * 3}px solid transparent`, borderBottom: `${36 + i * 6}px solid #3A7D2C`, marginTop: -28 - i * 4, marginLeft: -(18 + i * 3) + 4 }} />
-            <div style={{ width: 0, height: 0, borderLeft: `${14 + i * 2}px solid transparent`, borderRight: `${14 + i * 2}px solid transparent`, borderBottom: `${28 + i * 4}px solid #4A9E3A`, marginTop: -20 - i * 3, marginLeft: -(14 + i * 2) + 4 }} />
-          </div>
-        ))}
-        {/* Grass detail */}
-        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 28, background: 'linear-gradient(180deg, #7BC96A, #5A9E4A)', pointerEvents: 'none' }} />
+        {/* Grass strip */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 36, background: 'linear-gradient(180deg, #7BC96A, #5A9E4A)', pointerEvents: 'none' }} />
+        {/* Grass texture blades */}
+        <div style={{ position: 'absolute', bottom: 34, left: 0, right: 0, height: 10, pointerEvents: 'none', overflow: 'hidden' }}>
+          {Array.from({ length: 28 }).map((_, i) => (
+            <div key={i} style={{ position: 'absolute', bottom: 0, left: `${i * 3.6}%`, width: 3, height: 8 + (i % 3) * 3, background: '#4A9E3A', borderRadius: '2px 2px 0 0', transform: `rotate(${(i % 5 - 2) * 8}deg)`, transformOrigin: 'bottom center' }} />
+          ))}
+        </div>
         {/* Flowers */}
-        {[15, 35, 55, 75, 90].map((lp, i) => (
-          <div key={i} style={{ position: 'absolute', bottom: 6, left: `${lp}%`, fontSize: 14, pointerEvents: 'none' }}>
-            {['🌸','🌼','🌺','🌻','🌷'][i]}
+        {[8, 20, 35, 50, 63, 78, 92].map((lp, i) => (
+          <div key={i} style={{ position: 'absolute', bottom: 8, left: `${lp}%`, fontSize: 13, pointerEvents: 'none', transform: 'translateX(-50%)' }}>
+            {['🌸','🌼','🌺','🌻','🌷','🌸','🌼'][i]}
           </div>
         ))}
 

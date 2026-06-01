@@ -13,6 +13,7 @@ interface GalleryItem {
   greenBoost?: number
   blueBoost?: number
   saturation?: number  // multiply saturation (1 = normal, 1.5 = more vivid)
+  cols?: number        // override grid column count for higher resolution
 }
 
 const GALLERY: GalleryItem[] = [
@@ -26,7 +27,7 @@ const GALLERY: GalleryItem[] = [
   { src: '/download (8).jpg',            label: 'Flowers',    emoji: '🌸' },
   { src: '/download (9).jpg',            label: 'Landscape',  emoji: '🏞️' },
   { src: '/download (10).jpg',           label: 'Cottage',    emoji: '🏡' },
-  { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4 },
+  { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4, cols: 70 },
 ]
 
 // ─────────────────────────────────────────────────────────────────
@@ -170,8 +171,8 @@ export function ColorByNumbers() {
         let imgData = ctx.getImageData(0, 0, off.width, off.height)
         if (item) imgData = applyAdjustments(imgData, item)
         const aspect = off.width / off.height
-        const gridCols = COLS
-        const gridRows = Math.max(20, Math.round(COLS / aspect))
+        const gridCols = item?.cols ?? COLS
+        const gridRows = Math.max(20, Math.round(gridCols / aspect))
         const newGrid = buildGrid(imgData, gridCols, gridRows)
         setCols(gridCols)
         setRows(gridRows)
