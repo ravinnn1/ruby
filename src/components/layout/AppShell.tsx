@@ -51,12 +51,15 @@ export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellPr
         {/* Desktop sidebar */}
         <Sidebar />
 
-        {/* Main content */}
-        <main
-          className="lg:ml-64 min-h-screen pb-8 flex justify-center"
-          style={{ paddingTop: !supabaseConfigured && !bannerDismissed ? '2.5rem' : undefined }}
-        >
-          <div className="w-full max-w-2xl px-4 py-6">
+      {/* Main content */}
+      <main
+        className="lg:ml-64 min-h-screen flex justify-center"
+        style={{
+          paddingTop: !supabaseConfigured && !bannerDismissed ? '2.5rem' : undefined,
+          paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        <div className="w-full max-w-2xl px-4 py-6">
             <Outlet />
           </div>
         </main>

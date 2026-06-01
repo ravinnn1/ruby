@@ -4,18 +4,88 @@ import { useAuth } from '../lib/auth'
 import { ConfirmModal } from '../components/ui/GentleModal'
 import toast from 'react-hot-toast'
 
+// ── Theme definitions ─────────────────────────────────────────────
+// Each theme has: preview swatches, a background gradient, accent color,
+// text colors, and card style — all applied to <html> via data-theme attribute
 const themes = [
-  { id: 'soft-ruby',       label: 'Soft Ruby',       desc: 'Pink & ruby red',    preview: ['#F8C8DC', '#C94C63', '#9B111E'] },
-  { id: 'pink-matcha',     label: 'Pink Matcha',      desc: 'Blush & matcha',     preview: ['#FADADD', '#A8C686', '#6F8F5F'] },
-  { id: 'cream-garden',    label: 'Cream Garden',     desc: 'Warm cream & rose',  preview: ['#FFF7EF', '#E8A3B8', '#B76E79'] },
-  { id: 'deep-ruby-night', label: 'Deep Ruby Night',  desc: 'Dark & ruby',        preview: ['#2d0f1a', '#9B111E', '#C94C63'] },
+  {
+    id: 'soft-ruby',
+    label: 'Soft Ruby',
+    desc: 'Pink & ruby red',
+    preview: ['#F8C8DC', '#C94C63', '#9B111E'],
+    bg: 'linear-gradient(135deg, #FFF7EF 0%, #FADADD 40%, #FFF7EF 70%, #F8C8DC 100%)',
+    accent: '#C94C63',
+    cardBg: 'rgba(255,247,239,0.85)',
+    cardBorder: 'rgba(248,200,220,0.5)',
+    textPrimary: '#3A2A2F',
+    textMuted: '#7A6670',
+    badge: 'bg-[#F8C8DC] text-[#9B111E]',
+  },
+  {
+    id: 'pink-matcha',
+    label: 'Pink Matcha',
+    desc: 'Blush & matcha green',
+    preview: ['#FADADD', '#A8C686', '#6F8F5F'],
+    bg: 'linear-gradient(135deg, #F5FFF0 0%, #FADADD 35%, #EEF7E8 65%, #D4EBC4 100%)',
+    accent: '#6F8F5F',
+    cardBg: 'rgba(240,252,234,0.88)',
+    cardBorder: 'rgba(168,198,134,0.55)',
+    textPrimary: '#1E3020',
+    textMuted: '#4A6B3A',
+    badge: 'bg-[#D4EBC4] text-[#2E5020]',
+  },
+  {
+    id: 'cream-garden',
+    label: 'Cream Garden',
+    desc: 'Warm cream & dusty rose',
+    preview: ['#FFF7EF', '#E8A3B8', '#B76E79'],
+    bg: 'linear-gradient(135deg, #FFFBF5 0%, #FFF0E0 30%, #FFE8D6 60%, #F5D5C8 100%)',
+    accent: '#B76E79',
+    cardBg: 'rgba(255,248,238,0.92)',
+    cardBorder: 'rgba(232,163,184,0.45)',
+    textPrimary: '#3D2218',
+    textMuted: '#8B5E52',
+    badge: 'bg-[#F5D5C8] text-[#7A3828]',
+  },
+  {
+    id: 'deep-ruby-night',
+    label: 'Deep Ruby Night',
+    desc: 'Dark & moody ruby',
+    preview: ['#1A0A10', '#9B111E', '#E8607A'],
+    bg: 'linear-gradient(135deg, #0D0508 0%, #1A0A10 35%, #2D0F1A 65%, #1A0A10 100%)',
+    accent: '#E8607A',
+    cardBg: 'rgba(30,8,16,0.88)',
+    cardBorder: 'rgba(155,17,30,0.45)',
+    textPrimary: '#F5D8E0',
+    textMuted: '#C4909A',
+    badge: 'bg-[#3D0F1A] text-[#F5A0B0]',
+  },
 ]
+
+// Apply theme to document
+function applyTheme(id: string) {
+  document.documentElement.setAttribute('data-theme', id)
+  const t = themes.find(t => t.id === id)
+  if (!t) return
+  const root = document.documentElement.style
+  root.setProperty('--theme-bg', t.bg)
+  root.setProperty('--theme-accent', t.accent)
+  root.setProperty('--theme-card-bg', t.cardBg)
+  root.setProperty('--theme-card-border', t.cardBorder)
+  root.setProperty('--theme-text-primary', t.textPrimary)
+  root.setProperty('--theme-text-muted', t.textMuted)
+}
 
 const ts = { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' }
 
 export function Settings() {
   const { signOut } = useAuth()
-  const [selectedTheme, setSelectedTheme] = useState(() => localStorage.getItem('ruby_theme') || 'soft-ruby')
+  const [selectedTheme, setSelectedTheme] = useState(() => {
+    const saved = localStorage.getItem('ruby_theme') || 'soft-ruby'
+    // Apply on mount
+    setTimeout(() => applyTheme(saved), 0)
+    return saved
+  })
   const [reducedMotion, setReducedMotion] = useState(() => localStorage.getItem('ruby_reduced_motion') === '1')
   const [largerText, setLargerText] = useState(() => localStorage.getItem('ruby_larger_text') === '1')
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
@@ -24,6 +94,7 @@ export function Settings() {
   const handleTheme = (id: string) => {
     setSelectedTheme(id)
     localStorage.setItem('ruby_theme', id)
+    applyTheme(id)
     toast.success('Theme updated 💎', { style: ts })
   }
 
@@ -91,28 +162,71 @@ export function Settings() {
       {/* Theme */}
       {section('Theme', (
         <div className="space-y-2">
-          {themes.map(theme => (
-            <button
-              key={theme.id}
-              onClick={() => handleTheme(theme.id)}
-              className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all"
-              style={{
-                background: selectedTheme === theme.id ? 'rgba(201,76,99,0.08)' : 'rgba(255,255,255,0.5)',
-                border: `1.5px solid ${selectedTheme === theme.id ? '#C94C63' : 'rgba(248,200,220,0.4)'}`,
-              }}
-            >
-              <div className="flex gap-1">
-                {theme.preview.map((color, i) => (
-                  <div key={i} className="w-5 h-5 rounded-full border border-white/50" style={{ backgroundColor: color }} />
-                ))}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-[#3A2A2F]">{theme.label}</p>
-                <p className="text-xs text-[#7A6670]">{theme.desc}</p>
-              </div>
-              {selectedTheme === theme.id && <span className="text-[#C94C63] text-sm">✓</span>}
-            </button>
-          ))}
+          {themes.map((theme, i) => {
+            const isActive = selectedTheme === theme.id
+            const isDark = theme.id === 'deep-ruby-night'
+            return (
+              <motion.button
+                key={theme.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+                onClick={() => handleTheme(theme.id)}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left transition-all"
+                style={{
+                  background: isActive
+                    ? (isDark ? 'linear-gradient(135deg, #1A0A10, #2D0F1A)' : theme.bg)
+                    : (isDark ? 'rgba(20,5,10,0.85)' : 'rgba(255,255,255,0.5)'),
+                  border: `2px solid ${isActive ? theme.accent : (isDark ? 'rgba(155,17,30,0.3)' : 'rgba(248,200,220,0.4)')}`,
+                  boxShadow: isActive ? `0 4px 20px ${theme.accent}30` : 'none',
+                }}
+              >
+                {/* Color swatches */}
+                <div className="flex gap-1 shrink-0">
+                  {theme.preview.map((color, j) => (
+                    <div
+                      key={j}
+                      className="rounded-full border-2 border-white/60"
+                      style={{
+                        backgroundColor: color,
+                        width: j === 1 ? 22 : 18,
+                        height: j === 1 ? 22 : 18,
+                        boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                      }}
+                    />
+                  ))}
+                </div>
+
+                {/* Labels */}
+                <div className="flex-1 min-w-0">
+                  <p
+                    className="text-sm font-semibold truncate"
+                    style={{ color: isActive ? theme.textPrimary : (isDark ? '#F5D8E0' : '#3A2A2F') }}
+                  >
+                    {theme.label}
+                  </p>
+                  <p
+                    className="text-xs truncate"
+                    style={{ color: isActive ? theme.textMuted : (isDark ? '#C4909A' : '#7A6670') }}
+                  >
+                    {theme.desc}
+                  </p>
+                </div>
+
+                {/* Active checkmark */}
+                {isActive && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="text-sm font-bold shrink-0"
+                    style={{ color: theme.accent }}
+                  >
+                    ✓
+                  </motion.span>
+                )}
+              </motion.button>
+            )
+          })}
         </div>
       ))}
 

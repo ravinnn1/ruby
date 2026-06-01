@@ -140,6 +140,7 @@ function buildGrid(imgData: ImageData, cols: number, rows: number): Cell[] {
 export function ColorByNumbers() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const wrapRef = useRef<HTMLDivElement>(null)
 
   const [grid, setGrid] = useState<Cell[]>([])
   const [cols, setCols] = useState(COLS)
@@ -151,6 +152,11 @@ export function ColorByNumbers() {
   const [error, setError] = useState('')
   const [showGallery, setShowGallery] = useState(false)
   const [activeGalleryIdx, setActiveGalleryIdx] = useState(0)
+
+  // ── Touch pan/zoom state ──────────────────────────────────────
+  const [zoom, setZoom] = useState(1)
+  const [pan, setPan] = useState({ x: 0, y: 0 })
+  const touchRef = useRef<{ lastDist: number; lastX: number; lastY: number; touches: number }>({ lastDist: 0, lastX: 0, lastY: 0, touches: 0 })
 
   const progress = grid.length > 0 ? Math.round((grid.filter(c => c.filled).length / grid.length) * 100) : 0
   const complete = progress === 100
@@ -234,9 +240,8 @@ export function ColorByNumbers() {
     }
     ctx.stroke()
 
-    // Draw numbers on top
+    // Draw numbers on top — crisp, high-contrast
     if (showNumbers) {
-      ctx.font = 'bold 6px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       for (let row = 0; row < rows; row++) {
@@ -244,11 +249,18 @@ export function ColorByNumbers() {
           const cell = grid[row * cols + col]
           if (!cell.filled) {
             const x = col * CELL, y = row * CELL
-            // Dark outline for readability
-            ctx.fillStyle = 'rgba(255,255,255,0.7)'
-            ctx.fillText(String(cell.n), x + CELL / 2 + 0.5, y + CELL / 2 + 0.5)
-            ctx.fillStyle = 'rgba(30,15,10,0.85)'
-            ctx.fillText(String(cell.n), x + CELL / 2, y + CELL / 2)
+            const cx = x + CELL / 2, cy = y + CELL / 2
+            const num = String(cell.n)
+            // Use smaller font for 2-digit numbers
+            ctx.font = num.length > 1 ? 'bold 5px Arial' : 'bold 6.5px Arial'
+            // White halo for contrast
+            ctx.strokeStyle = 'rgba(255,255,255,0.9)'
+            ctx.lineWidth = 2.5
+            ctx.lineJoin = 'round'
+            ctx.strokeText(num, cx, cy)
+            // Dark text
+            ctx.fillStyle = 'rgba(20,10,5,0.92)'
+            ctx.fillText(num, cx, cy)
           }
         }
       }
@@ -380,11 +392,45 @@ export function ColorByNumbers() {
               <p className="text-[#9B111E] text-sm">{error}</p>
             </div>
           ) : (
-            <canvas
-              ref={canvasRef}
-              onClick={handleClick}
-              style={{ borderRadius: 12, border: '2px solid rgba(201,76,99,0.3)', cursor: 'crosshair', display: 'block', maxWidth: '100%', imageRendering: 'pixelated' }}
-            />
+            <div
+              ref={wrapRef}
+              style={{ overflow: 'hidden', borderRadius: 12, border: '2px solid rgba(201,76,99,0.3)', touchAction: 'none', maxWidth: '100%' }}
+              onTouchStart={e => {
+                if (e.touches.length === 2) {
+                  const dx = e.touches[0].clientX - e.touches[1].clientX
+                  const dy = e.touches[0].clientY - e.touches[1].clientY
+                  touchRef.current.lastDist = Math.hypot(dx, dy)
+                  touchRef.current.touches = 2
+                } else if (e.touches.length === 1) {
+                  touchRef.current.lastX = e.touches[0].clientX
+                  touchRef.current.lastY = e.touches[0].clientY
+                  touchRef.current.touches = 1
+                }
+              }}
+              onTouchMove={e => {
+                e.preventDefault()
+                if (e.touches.length === 2 && touchRef.current.touches === 2) {
+                  const dx = e.touches[0].clientX - e.touches[1].clientX
+                  const dy = e.touches[0].clientY - e.touches[1].clientY
+                  const dist = Math.hypot(dx, dy)
+                  const delta = dist / touchRef.current.lastDist
+                  setZoom(z => Math.min(5, Math.max(1, z * delta)))
+                  touchRef.current.lastDist = dist
+                } else if (e.touches.length === 1 && touchRef.current.touches === 1) {
+                  const dx = e.touches[0].clientX - touchRef.current.lastX
+                  const dy = e.touches[0].clientY - touchRef.current.lastY
+                  setPan(p => ({ x: p.x + dx, y: p.y + dy }))
+                  touchRef.current.lastX = e.touches[0].clientX
+                  touchRef.current.lastY = e.touches[0].clientY
+                }
+              }}
+            >
+              <canvas
+                ref={canvasRef}
+                onClick={handleClick}
+                style={{ borderRadius: 10, cursor: 'crosshair', display: 'block', maxWidth: '100%', imageRendering: 'pixelated', transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`, transformOrigin: '0 0', transition: 'transform 0.05s' }}
+              />
+            </div>
           )}
           {!loading && !error && (
             <div style={{ position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: '50%', background: selectedHex, border: '2.5px solid white', boxShadow: '0 2px 10px rgba(0,0,0,0.3)' }} />
