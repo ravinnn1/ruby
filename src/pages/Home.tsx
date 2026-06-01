@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabaseClient'
 import { formatDate } from '../lib/dateUtils'
-import { FallingLeaves } from '../components/ui/FallingLeaves'
 import { FracturedRubyBg } from '../components/ui/FracturedRubyBg'
 import toast from 'react-hot-toast'
 
@@ -102,9 +101,6 @@ export function Home({ onOpenCalm }: HomeProps) {
       >
         <FracturedRubyBg />
       </div>
-
-      {/* Falling leaves */}
-      <FallingLeaves />
 
       <div className="relative z-10 space-y-6 pb-8">
 

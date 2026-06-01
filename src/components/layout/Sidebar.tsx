@@ -1,12 +1,11 @@
 import React from 'react'
-import { NavLink } from 'react-router-dom'
-
-// ── Nav sections with visual grouping ───────────────────────────
+import { NavLink, useLocation } from 'react-router-dom'
 
 const navSections = [
   {
     label: 'My Space',
     color: '#C94C63',
+    darkColor: '#FF8FAA',
     items: [
       { to: '/',         emoji: '🏡', label: 'Home' },
       { to: '/journal',  emoji: '📖', label: 'Journal' },
@@ -19,6 +18,7 @@ const navSections = [
   {
     label: 'Comfort',
     color: '#B76E79',
+    darkColor: '#F0A0B0',
     items: [
       { to: '/vault',    emoji: '🔮', label: 'Comfort Vault' },
       { to: '/letters',  emoji: '✉️',  label: 'Letters' },
@@ -29,6 +29,7 @@ const navSections = [
   {
     label: 'Support',
     color: '#9B111E',
+    darkColor: '#FF6B7A',
     items: [
       { to: '/episodes',    emoji: '💗', label: 'Episodes' },
       { to: '/safety',      emoji: '🛡️',  label: 'Safe Plan' },
@@ -39,6 +40,7 @@ const navSections = [
   {
     label: 'Play',
     color: '#6F8F5F',
+    darkColor: '#A8D890',
     items: [
       { to: '/distraction', emoji: '🎮', label: 'Distraction' },
       { to: '/adhd',        emoji: '✨', label: 'ADHD Fun' },
@@ -51,30 +53,60 @@ const bottomItems = [
   { to: '/settings', emoji: '⚙️',  label: 'Settings' },
 ]
 
-// ── Section label colors (subtle pill) ──────────────────────────
-const sectionPillStyle = (color: string) => ({
-  background: `${color}18`,
-  color,
-  border: `1px solid ${color}30`,
-})
-
 export function Sidebar() {
-  const linkClass = (isActive: boolean) =>
-    `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group ${
+  const location = useLocation()
+  const isHome = location.pathname === '/'
+
+  // On home: dark glass matching the shader. On other pages: warm cream.
+  const sidebarStyle = isHome
+    ? {
+        background: 'rgba(12, 2, 4, 0.72)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRight: '1px solid rgba(255,120,120,0.15)',
+        boxShadow: '4px 0 40px rgba(0,0,0,0.4)',
+      }
+    : {
+        background: 'rgba(255,245,236,0.95)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderRight: '1.5px solid rgba(242,168,200,0.4)',
+        boxShadow: '4px 0 32px rgba(46,31,37,0.07)',
+      }
+
+  const linkClass = (isActive: boolean) => {
+    if (isHome) {
+      return `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group ${
+        isActive
+          ? 'bg-white/10 text-white font-semibold'
+          : 'text-white/55 hover:bg-white/08 hover:text-white/90'
+      }`
+    }
+    return `relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 group ${
       isActive
         ? 'bg-[#B83A55]/12 text-[#8B0D1A] font-semibold'
         : 'text-[#6B5560] hover:bg-[#F2A8C8]/25 hover:text-[#2E1F25]'
     }`
+  }
+
+  const labelColor = (color: string, darkColor: string) => isHome ? darkColor : color
+
+  const sectionPillStyle = (color: string, darkColor: string) => isHome
+    ? { background: `${darkColor}20`, color: darkColor, border: `1px solid ${darkColor}35` }
+    : { background: `${color}18`, color, border: `1px solid ${color}30` }
+
+  const dividerColor = isHome ? 'rgba(255,120,120,0.12)' : 'rgba(242,168,200,0.25)'
+  const topDivider = isHome
+    ? 'linear-gradient(90deg, transparent, rgba(255,120,120,0.25), transparent)'
+    : 'linear-gradient(90deg, transparent, rgba(242,168,200,0.6), transparent)'
+
+  const logoTextColor = isHome ? 'text-white' : 'text-[#2E1F25]'
+  const logoSubColor = isHome ? 'text-white/45' : 'text-[#6B5560]'
 
   return (
     <aside
       className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-64 z-30 overflow-y-auto"
-      style={{
-        background: 'rgba(255,245,236,0.95)',
-        backdropFilter: 'blur(20px)',
-        borderRight: '1.5px solid rgba(242,168,200,0.4)',
-        boxShadow: '4px 0 32px rgba(46,31,37,0.07)',
-      }}
+      style={sidebarStyle}
     >
       {/* Logo */}
       <div className="px-5 py-5 shrink-0">
@@ -86,14 +118,14 @@ export function Sidebar() {
             💎
           </div>
           <div>
-            <p className="font-display text-base text-[#2E1F25] leading-tight">Ruby&apos;s Safe Place</p>
-            <p className="text-[10px] text-[#6B5560]">A quiet corner for you</p>
+            <p className={`font-display text-base leading-tight ${logoTextColor}`}>Ruby&apos;s Safe Place</p>
+            <p className={`text-[10px] ${logoSubColor}`}>A quiet corner for you</p>
           </div>
         </div>
       </div>
 
       {/* Top divider */}
-      <div className="mx-4 h-px mb-2" style={{ background: 'linear-gradient(90deg, transparent, rgba(242,168,200,0.6), transparent)' }} />
+      <div className="mx-4 h-px mb-2" style={{ background: topDivider }} />
 
       {/* Sectioned nav */}
       <nav className="flex-1 px-3 pb-2 space-y-1" aria-label="Main navigation">
@@ -103,11 +135,14 @@ export function Sidebar() {
             <div className="flex items-center gap-2 px-2 pt-3 pb-1.5">
               <span
                 className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-                style={sectionPillStyle(section.color)}
+                style={sectionPillStyle(section.color, section.darkColor)}
               >
                 {section.label}
               </span>
-              <div className="flex-1 h-px" style={{ background: `linear-gradient(90deg, ${section.color}25, transparent)` }} />
+              <div
+                className="flex-1 h-px"
+                style={{ background: `linear-gradient(90deg, ${labelColor(section.color, section.darkColor)}30, transparent)` }}
+              />
             </div>
 
             {/* Section items */}
@@ -126,7 +161,7 @@ export function Sidebar() {
                       <span
                         className="absolute left-0 w-0.5 h-5 rounded-r-full transition-all duration-200"
                         style={{
-                          background: isActive ? section.color : 'transparent',
+                          background: isActive ? labelColor(section.color, section.darkColor) : 'transparent',
                           opacity: isActive ? 1 : 0,
                         }}
                       />
@@ -137,7 +172,7 @@ export function Sidebar() {
                       {isActive && (
                         <span
                           className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
-                          style={{ background: section.color }}
+                          style={{ background: labelColor(section.color, section.darkColor) }}
                         />
                       )}
                     </>
@@ -146,9 +181,9 @@ export function Sidebar() {
               ))}
             </div>
 
-            {/* Inter-section divider (not after last section) */}
+            {/* Inter-section divider */}
             {si < navSections.length - 1 && (
-              <div className="mx-2 mt-2 h-px" style={{ background: 'rgba(242,168,200,0.25)' }} />
+              <div className="mx-2 mt-2 h-px" style={{ background: dividerColor }} />
             )}
           </div>
         ))}
@@ -158,18 +193,23 @@ export function Sidebar() {
       <div className="px-3 pb-5 shrink-0">
         <div
           className="mx-1 mb-3 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgba(242,168,200,0.6), transparent)' }}
+          style={{ background: topDivider }}
         />
 
-        {/* Bottom label */}
         <div className="flex items-center gap-2 px-2 pb-1.5">
           <span
             className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
-            style={sectionPillStyle('#7A6670')}
+            style={isHome
+              ? { background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.45)', border: '1px solid rgba(255,255,255,0.12)' }
+              : { background: 'rgba(122,102,112,0.1)', color: '#7A6670', border: '1px solid rgba(122,102,112,0.2)' }
+            }
           >
             Account
           </span>
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(122,102,112,0.2), transparent)' }} />
+          <div
+            className="flex-1 h-px"
+            style={{ background: isHome ? 'rgba(255,255,255,0.08)' : 'rgba(122,102,112,0.15)' }}
+          />
         </div>
 
         <div className="space-y-0.5">
@@ -187,7 +227,10 @@ export function Sidebar() {
                   </span>
                   <span className="truncate">{label}</span>
                   {isActive && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full shrink-0 bg-[#7A6670]" />
+                    <span
+                      className="ml-auto w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ background: isHome ? 'rgba(255,255,255,0.6)' : '#7A6670' }}
+                    />
                   )}
                 </>
               )}
