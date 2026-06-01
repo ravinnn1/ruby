@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Plus, Shuffle, Edit2, Trash2, Heart } from 'lucide-react'
+import { Plus, Shuffle, Edit2, Trash2, Heart, Upload, X, CloudUpload, Image } from 'lucide-react'
 import { useAuth } from '../lib/auth'
 import { supabase } from '../lib/supabaseClient'
+import { supabaseConfigured } from '../lib/supabaseClient'
+import { uploadImage } from '../lib/supabaseStorage'
 import type { ComfortItem } from '../lib/types'
 import { EmptyState } from '../components/ui/EmptyState'
 import { LoadingState } from '../components/ui/LoadingState'
@@ -43,7 +45,12 @@ export function ComfortVault() {
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
   const [formType, setFormType] = useState('text')
+  const [formMediaUrl, setFormMediaUrl] = useState('')
+  const [imagePreview, setImagePreview] = useState('')
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [saving, setSaving] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { if (user) loadItems() }, [user])
 
@@ -63,6 +70,9 @@ export function ComfortVault() {
     setFormTitle('')
     setFormContent('')
     setFormType('text')
+    setFormMediaUrl('')
+    setImagePreview('')
+    setPendingFile(null)
     setShowModal(true)
   }
 
@@ -72,18 +82,60 @@ export function ComfortVault() {
     setFormTitle(item.title || '')
     setFormContent(item.content || '')
     setFormType(item.item_type || 'text')
+    setFormMediaUrl(item.media_url || '')
+    setImagePreview(item.media_url || '')
+    setPendingFile(null)
     setShowModal(true)
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPendingFile(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string
+      setImagePreview(dataUrl)
+      if (!supabaseConfigured) setFormMediaUrl(dataUrl)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const clearImage = () => {
+    setImagePreview('')
+    setPendingFile(null)
+    setFormMediaUrl('')
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   const saveItem = async () => {
     if (!user || !formTitle.trim()) return
     setSaving(true)
+
+    let finalMediaUrl = formMediaUrl
+
+    // Upload image if photos category and file pending
+    if (pendingFile && supabaseConfigured && user) {
+      setUploadingImage(true)
+      const uploaded = await uploadImage(pendingFile, user.id, 'comfort')
+      setUploadingImage(false)
+      if (uploaded) {
+        finalMediaUrl = uploaded
+      } else {
+        // fallback: base64 already set for offline
+        toast('Photo saved locally (cloud upload failed)', {
+          icon: '⚠️', style: ts,
+        })
+      }
+    }
+
     const payload = {
       user_id: user.id,
       category: formCategory,
       title: formTitle.trim(),
       content: formContent.trim() || null,
-      item_type: formType,
+      item_type: formCategory === 'photos' ? 'image' : formType,
+      media_url: finalMediaUrl || null,
       updated_at: new Date().toISOString(),
     }
     if (editingItem) {
@@ -92,6 +144,7 @@ export function ComfortVault() {
       await supabase.from('comfort_items').insert({ ...payload, is_favorite: false, created_at: new Date().toISOString() })
     }
     setSaving(false)
+    setPendingFile(null)
     setShowModal(false)
     await loadItems()
     toast.success('Saved to your vault. 💎', { style: ts })
@@ -214,41 +267,58 @@ export function ComfortVault() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.04 }}
                 whileHover={{ y: -3, boxShadow: '0 12px 40px rgba(155,17,30,0.15)' }}
-                className="jewel-card p-4 cursor-pointer relative"
+                className="jewel-card cursor-pointer relative overflow-hidden group"
+                style={{ padding: item.media_url ? 0 : undefined }}
                 onClick={() => setViewingItem(item)}
               >
-                {/* Faceted corner accent */}
-                <div
-                  className="absolute top-0 right-0 w-8 h-8 rounded-bl-2xl rounded-tr-3xl opacity-30"
-                  style={{ background: cat?.color || '#C94C63' }}
-                />
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="text-xl">{cat?.emoji || '💎'}</span>
-                  <div className="flex gap-1" onClick={e => e.stopPropagation()}>
-                    <button
-                      onClick={() => toggleFavorite(item)}
-                      className="p-1 rounded-lg transition-all"
-                      style={{ color: item.is_favorite ? '#C94C63' : '#B8A0A8' }}
-                    >
-                      <Heart size={13} fill={item.is_favorite ? '#C94C63' : 'none'} />
-                    </button>
-                    <button onClick={() => openEdit(item)} className="p-1 rounded-lg text-[#B8A0A8] hover:text-[#C94C63] transition-all">
-                      <Edit2 size={13} />
-                    </button>
-                    <button onClick={() => setDeleteTarget(item.id)} className="p-1 rounded-lg text-[#B8A0A8] hover:text-[#9B111E] transition-all">
-                      <Trash2 size={13} />
-                    </button>
+                {/* Photo card — image first */}
+                {item.media_url && (
+                  <div className="relative overflow-hidden rounded-t-3xl">
+                    <img
+                      src={item.media_url}
+                      alt={item.title}
+                      className="w-full h-32 object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </div>
-                </div>
-                <p className="font-display text-sm text-[#3A2A2F] mb-1 leading-snug">{item.title}</p>
-                {item.content && (
-                  <p className="text-xs text-[#7A6670] leading-relaxed line-clamp-2">{item.content}</p>
                 )}
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ background: `${cat?.color}18`, color: cat?.color }}>
-                    {cat?.label}
-                  </span>
-                  <span className="text-[9px] text-[#B8A0A8]">{formatDate(item.created_at)}</span>
+                <div className={item.media_url ? 'p-3' : 'p-4'}>
+                  {/* Faceted corner accent */}
+                  {!item.media_url && (
+                    <div
+                      className="absolute top-0 right-0 w-8 h-8 rounded-bl-2xl rounded-tr-3xl opacity-30"
+                      style={{ background: cat?.color || '#C94C63' }}
+                    />
+                  )}
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <span className="text-xl">{cat?.emoji || '💎'}</span>
+                    <div className="flex gap-1" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => toggleFavorite(item)}
+                        className="p-1 rounded-lg transition-all"
+                        style={{ color: item.is_favorite ? '#C94C63' : '#B8A0A8' }}
+                      >
+                        <Heart size={13} fill={item.is_favorite ? '#C94C63' : 'none'} />
+                      </button>
+                      <button onClick={() => openEdit(item)} className="p-1 rounded-lg text-[#B8A0A8] hover:text-[#C94C63] transition-all">
+                        <Edit2 size={13} />
+                      </button>
+                      <button onClick={() => setDeleteTarget(item.id)} className="p-1 rounded-lg text-[#B8A0A8] hover:text-[#9B111E] transition-all">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                  <p className="font-display text-sm text-[#3A2A2F] mb-1 leading-snug">{item.title}</p>
+                  {item.content && (
+                    <p className="text-xs text-[#7A6670] leading-relaxed line-clamp-2">{item.content}</p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[9px] px-2 py-0.5 rounded-full font-medium" style={{ background: `${cat?.color}18`, color: cat?.color }}>
+                      {cat?.label}
+                    </span>
+                    <span className="text-[9px] text-[#B8A0A8]">{formatDate(item.created_at)}</span>
+                  </div>
                 </div>
               </motion.div>
             )
@@ -280,9 +350,23 @@ export function ComfortVault() {
               }}
               onClick={e => e.stopPropagation()}
             >
-              <div className="text-center mb-4">
-                <span className="text-4xl">{categories.find(c => c.id === viewingItem.category)?.emoji || '💎'}</span>
-              </div>
+              {/* Show image if present */}
+              {viewingItem.media_url && (
+                <div className="relative -mx-6 -mt-6 mb-5 overflow-hidden rounded-t-3xl">
+                  <img
+                    src={viewingItem.media_url}
+                    alt={viewingItem.title}
+                    className="w-full h-52 object-cover"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#FFF7EF]/60 to-transparent" />
+                </div>
+              )}
+              {!viewingItem.media_url && (
+                <div className="text-center mb-4">
+                  <span className="text-4xl">{categories.find(c => c.id === viewingItem.category)?.emoji || '💎'}</span>
+                </div>
+              )}
               <h2 className="font-display text-xl text-[#3A2A2F] text-center mb-3">{viewingItem.title}</h2>
               {viewingItem.content && (
                 <p className="text-sm text-[#3A2A2F] leading-relaxed text-center whitespace-pre-wrap" style={{ fontFamily: 'Georgia, serif', lineHeight: 1.9 }}>
@@ -456,19 +540,87 @@ export function ComfortVault() {
               <textarea
                 value={formContent}
                 onChange={e => setFormContent(e.target.value)}
-                placeholder="Content (optional)"
-                rows={4}
-                className="w-full px-3 py-2.5 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm resize-none focus:outline-none focus:border-[#C94C63] transition-all mb-4"
+                placeholder="Caption or note (optional)"
+                rows={3}
+                className="w-full px-3 py-2.5 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm resize-none focus:outline-none focus:border-[#C94C63] transition-all mb-3"
               />
+
+              {/* Photo upload — shown for photos category */}
+              {formCategory === 'photos' && (
+                <div className="mb-4">
+                  <p className="text-xs text-[#7A6670] mb-2 font-medium flex items-center gap-1.5">
+                    <Image size={12} />
+                    Photo
+                    {supabaseConfigured && (
+                      <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold"
+                        style={{ background: 'rgba(111,143,95,0.12)', color: '#6F8F5F' }}>
+                        ☁️ cloud
+                      </span>
+                    )}
+                  </p>
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                  {!imagePreview ? (
+                    <motion.div
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => fileRef.current?.click()}
+                      className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-dashed cursor-pointer transition-all"
+                      style={{ borderColor: 'rgba(232,163,184,0.5)', background: 'rgba(232,163,184,0.06)' }}
+                    >
+                      <Upload size={16} className="text-[#E8A3B8]" />
+                      <div>
+                        <p className="text-xs text-[#7A6670] font-medium">Upload a photo</p>
+                        <p className="text-[10px] text-[#B8A0A8]">
+                          {supabaseConfigured ? 'Saved to your private cloud vault' : 'Saved locally'}
+                        </p>
+                      </div>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.97 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="relative"
+                    >
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-36 object-cover rounded-2xl"
+                        style={{ boxShadow: '0 4px 16px rgba(155,17,30,0.1)' }}
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                      {pendingFile && supabaseConfigured && (
+                        <div className="absolute bottom-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+                          style={{ background: 'rgba(111,143,95,0.9)', color: 'white' }}>
+                          <CloudUpload size={9} /> Will upload on save
+                        </div>
+                      )}
+                      <button
+                        onClick={clearImage}
+                        className="absolute top-2 right-2 w-6 h-6 flex items-center justify-center rounded-full"
+                        style={{ background: 'rgba(255,255,255,0.92)', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }}
+                      >
+                        <X size={11} className="text-[#C94C63]" />
+                      </button>
+                      <button
+                        onClick={() => fileRef.current?.click()}
+                        className="absolute top-2 left-2 flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold"
+                        style={{ background: 'rgba(255,255,255,0.92)', color: '#7A6670' }}
+                      >
+                        <Upload size={9} /> Change
+                      </button>
+                    </motion.div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-2">
                 <button
                   onClick={saveItem}
-                  disabled={!formTitle.trim() || saving}
+                  disabled={!formTitle.trim() || saving || uploadingImage}
                   className="flex-1 py-3 rounded-2xl text-white text-sm font-medium disabled:opacity-40"
                   style={{ background: 'linear-gradient(135deg, #9B111E, #C94C63)' }}
                 >
-                  {saving ? 'Saving…' : 'Save to vault 💎'}
+                  {uploadingImage ? '☁️ Uploading…' : saving ? 'Saving…' : 'Save to vault 💎'}
                 </button>
                 <button onClick={() => setShowModal(false)} className="px-4 py-3 rounded-2xl text-sm text-[#7A6670] hover:bg-[#F8C8DC]/30 transition-all">
                   Cancel

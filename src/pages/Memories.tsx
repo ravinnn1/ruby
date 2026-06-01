@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Shuffle, Grid, List, Trash2, Edit2, Heart } from 'lucide-react'
+import { Plus, Shuffle, Grid, List, Trash2, Edit2, Heart, Upload, X, CloudUpload } from 'lucide-react'
 import { RubyCard } from '../components/ui/RubyCard'
 import { SoftButton } from '../components/ui/SoftButton'
 import { MoodPill } from '../components/ui/MoodPill'
@@ -8,6 +8,9 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { GentleModal, ConfirmModal } from '../components/ui/GentleModal'
 import { formatDate } from '../lib/dateUtils'
 import { getAll, saveAll, addItem, updateItem, deleteItem, getRandom, RUBY_KEYS } from '../lib/storage'
+import { uploadImage } from '../lib/supabaseStorage'
+import { supabaseConfigured } from '../lib/supabaseClient'
+import { useAuth } from '../lib/auth'
 import toast from 'react-hot-toast'
 
 interface LocalMemory {
@@ -17,7 +20,7 @@ interface LocalMemory {
   memory_date: string
   mood: string
   tags: string[]
-  image_url: string   // URL or base64 dataURL
+  image_url: string   // URL (Supabase) or base64 dataURL (offline)
   is_favorite: boolean
   created_at: string
   updated_at: string
@@ -40,6 +43,7 @@ const defaultForm = {
 }
 
 export function Memories() {
+  const { user } = useAuth()
   const [memories, setMemories] = useState<LocalMemory[]>(() =>
     getAll<LocalMemory>(RUBY_KEYS.memories)
   )
@@ -52,12 +56,15 @@ export function Memories() {
   const [form, setForm] = useState(defaultForm)
   const [saving, setSaving] = useState(false)
   const [imagePreview, setImagePreview] = useState('')
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const openAdd = () => {
     setEditing(null)
     setForm({ ...defaultForm, memory_date: new Date().toISOString().split('T')[0] })
     setImagePreview('')
+    setPendingFile(null)
     setShowModal(true)
   }
 
@@ -73,37 +80,74 @@ export function Memories() {
       is_favorite: m.is_favorite,
     })
     setImagePreview(m.image_url)
+    setPendingFile(null)
     setShowModal(true)
   }
 
-  // Convert local file to base64 dataURL for offline storage
+  // When a file is picked: show preview immediately, store file for upload on save
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
+    setPendingFile(file)
+    // Always show a local preview right away
     const reader = new FileReader()
     reader.onload = (ev) => {
       const dataUrl = ev.target?.result as string
-      setForm(f => ({ ...f, image_url: dataUrl }))
       setImagePreview(dataUrl)
+      // If Supabase isn't configured, store base64 directly
+      if (!supabaseConfigured) {
+        setForm(f => ({ ...f, image_url: dataUrl }))
+      }
     }
     reader.readAsDataURL(file)
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.title.trim()) return
     setSaving(true)
+
+    let finalImageUrl = form.image_url
+
+    // If there's a pending file AND Supabase is configured, upload it now
+    if (pendingFile && supabaseConfigured && user) {
+      setUploadingImage(true)
+      const uploaded = await uploadImage(pendingFile, user.id, 'memories')
+      setUploadingImage(false)
+      if (uploaded) {
+        finalImageUrl = uploaded
+        toast.success('Photo saved to your vault ☁️', {
+          style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
+        })
+      } else {
+        // Fall back to base64 if upload failed
+        toast('Photo saved locally (cloud upload failed)', {
+          icon: '⚠️',
+          style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
+        })
+        // base64 was already set in handleFileChange for offline path
+      }
+    }
+
+    const payload = { ...form, image_url: finalImageUrl }
+
     if (editing) {
-      const updated = updateItem<LocalMemory>(RUBY_KEYS.memories, editing.id, { ...form })
+      const updated = updateItem<LocalMemory>(RUBY_KEYS.memories, editing.id, payload)
       if (updated) {
         setMemories(getAll<LocalMemory>(RUBY_KEYS.memories))
-        toast.success('Memory updated 💎')
+        toast.success('Memory updated 💎', {
+          style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
+        })
       }
     } else {
-      addItem<LocalMemory>(RUBY_KEYS.memories, { ...form })
+      addItem<LocalMemory>(RUBY_KEYS.memories, payload)
       setMemories(getAll<LocalMemory>(RUBY_KEYS.memories))
-      toast.success('Memory saved 🌸')
+      toast.success('Memory saved 🌸', {
+        style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
+      })
     }
+
     setSaving(false)
+    setPendingFile(null)
     setShowModal(false)
   }
 
@@ -111,7 +155,9 @@ export function Memories() {
     deleteItem<LocalMemory>(RUBY_KEYS.memories, id)
     setMemories(getAll<LocalMemory>(RUBY_KEYS.memories))
     setDeleteTarget(null)
-    toast.success('Memory removed')
+    toast.success('Memory removed', {
+      style: { background: '#FFF7EF', color: '#3A2A2F', border: '1px solid #F8C8DC' },
+    })
   }
 
   const handleToggleFavorite = (m: LocalMemory) => {
@@ -131,11 +177,19 @@ export function Memories() {
     }))
   }
 
+  const clearImage = () => {
+    setImagePreview('')
+    setPendingFile(null)
+    setForm(f => ({ ...f, image_url: '' }))
+    if (fileRef.current) fileRef.current.value = ''
+  }
+
   const filtered = filterTag === 'all'
     ? memories
     : memories.filter(m => m.tags.includes(filterTag))
 
   const sorted = [...filtered].sort((a, b) => b.memory_date.localeCompare(a.memory_date))
+  const favorites = memories.filter(m => m.is_favorite)
 
   return (
     <div className="space-y-6">
@@ -161,7 +215,55 @@ export function Memories() {
             </SoftButton>
           </div>
         </div>
+
+        {/* Cloud storage badge */}
+        {supabaseConfigured ? (
+          <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-[10px] font-semibold"
+            style={{ background: 'rgba(111,143,95,0.12)', color: '#6F8F5F', border: '1px solid rgba(111,143,95,0.25)' }}>
+            <CloudUpload size={11} />
+            Photos saved to your private cloud vault
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 mt-2 px-3 py-1 rounded-full text-[10px] font-semibold"
+            style={{ background: 'rgba(183,110,121,0.1)', color: '#B76E79', border: '1px solid rgba(183,110,121,0.2)' }}>
+            📱 Saved locally on this device
+          </div>
+        )}
       </motion.div>
+
+      {/* Favorites strip */}
+      {favorites.length > 0 && (
+        <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+          <p className="text-xs font-bold text-[#7A6670] uppercase tracking-widest mb-2">❤️ Favorites</p>
+          <div className="flex gap-3 overflow-x-auto pb-1">
+            {favorites.map(m => (
+              <motion.div
+                key={m.id}
+                whileHover={{ scale: 1.05, y: -3 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => openEdit(m)}
+                className="flex-shrink-0 w-20 cursor-pointer"
+              >
+                {m.image_url ? (
+                  <img
+                    src={m.image_url}
+                    alt={m.title}
+                    className="w-20 h-20 object-cover rounded-2xl"
+                    style={{ boxShadow: '0 4px 16px rgba(155,17,30,0.18)' }}
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-2xl flex items-center justify-center text-2xl"
+                    style={{ background: 'linear-gradient(135deg, rgba(248,200,220,0.4), rgba(168,198,134,0.2))' }}>
+                    📷
+                  </div>
+                )}
+                <p className="text-[9px] text-[#7A6670] text-center mt-1 truncate">{m.title}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Filter tags */}
       <div className="flex flex-wrap gap-2">
@@ -231,30 +333,41 @@ export function Memories() {
             >
               <RubyCard
                 variant="soft"
-                className="p-0 overflow-hidden cursor-pointer hover:scale-[1.02] transition-transform"
+                className="p-0 overflow-hidden cursor-pointer group"
                 onClick={() => openEdit(m)}
               >
-                {m.image_url ? (
-                  <img
-                    src={m.image_url}
-                    alt={m.title}
-                    className="w-full h-36 object-cover"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                  />
-                ) : (
-                  <div
-                    className="w-full h-36 flex items-center justify-center text-4xl"
-                    style={{ background: 'linear-gradient(135deg, rgba(248,200,220,0.3), rgba(168,198,134,0.2))' }}
-                  >
-                    📷
-                  </div>
-                )}
+                <div className="relative overflow-hidden">
+                  {m.image_url ? (
+                    <img
+                      src={m.image_url}
+                      alt={m.title}
+                      className="w-full h-36 object-cover transition-transform duration-500 group-hover:scale-105"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                    />
+                  ) : (
+                    <div
+                      className="w-full h-36 flex items-center justify-center text-4xl"
+                      style={{ background: 'linear-gradient(135deg, rgba(248,200,220,0.3), rgba(168,198,134,0.2))' }}
+                    >
+                      📷
+                    </div>
+                  )}
+                  {/* Favorite badge */}
+                  {m.is_favorite && (
+                    <div className="absolute top-2 left-2 w-6 h-6 rounded-full flex items-center justify-center text-xs"
+                      style={{ background: 'rgba(255,255,255,0.9)', boxShadow: '0 2px 8px rgba(0,0,0,0.12)' }}>
+                      ❤️
+                    </div>
+                  )}
+                  {/* Hover overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </div>
                 <div className="p-3">
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs font-semibold text-[#3A2A2F] truncate flex-1">{m.title}</p>
                     <button
                       onClick={e => { e.stopPropagation(); handleToggleFavorite(m) }}
-                      className="ml-1 text-sm"
+                      className="ml-1 text-sm transition-transform hover:scale-125"
                     >
                       {m.is_favorite ? '❤️' : '🤍'}
                     </button>
@@ -281,12 +394,14 @@ export function Memories() {
               <RubyCard variant="soft">
                 <div className="flex gap-4">
                   {m.image_url ? (
-                    <img
-                      src={m.image_url}
-                      alt={m.title}
-                      className="w-20 h-20 object-cover rounded-2xl flex-shrink-0"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-                    />
+                    <div className="relative flex-shrink-0 overflow-hidden rounded-2xl w-20 h-20">
+                      <img
+                        src={m.image_url}
+                        alt={m.title}
+                        className="w-full h-full object-cover"
+                        onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+                      />
+                    </div>
                   ) : (
                     <div
                       className="w-20 h-20 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
@@ -400,18 +515,38 @@ export function Memories() {
             />
           </div>
 
-          {/* Image — file upload or URL */}
+          {/* Image upload */}
           <div>
-            <label className="block text-sm text-[#7A6670] mb-1.5">Image</label>
+            <label className="block text-sm text-[#7A6670] mb-1.5">
+              Photo
+              {supabaseConfigured && (
+                <span className="ml-2 text-[10px] font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: 'rgba(111,143,95,0.12)', color: '#6F8F5F' }}>
+                  ☁️ Cloud storage enabled
+                </span>
+              )}
+            </label>
             <div className="space-y-2">
-              {/* File upload */}
-              <div
-                onClick={() => fileRef.current?.click()}
-                className="flex items-center gap-3 px-4 py-3 rounded-2xl border-2 border-dashed border-[#F8C8DC] hover:border-[#C94C63]/40 cursor-pointer transition-colors"
-              >
-                <span className="text-xl">📁</span>
-                <span className="text-sm text-[#7A6670]">Upload from device</span>
-              </div>
+              {/* Drop zone */}
+              {!imagePreview && (
+                <motion.div
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  onClick={() => fileRef.current?.click()}
+                  className="flex flex-col items-center gap-2 px-4 py-6 rounded-2xl border-2 border-dashed cursor-pointer transition-all"
+                  style={{ borderColor: 'rgba(201,76,99,0.3)', background: 'rgba(248,200,220,0.06)' }}
+                >
+                  <Upload size={22} className="text-[#C94C63] opacity-60" />
+                  <div className="text-center">
+                    <p className="text-sm text-[#7A6670] font-medium">Upload a photo</p>
+                    <p className="text-[10px] text-[#B8A0A8] mt-0.5">
+                      {supabaseConfigured
+                        ? 'Saved securely to your private cloud vault'
+                        : 'Saved locally on this device'}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
               <input
                 ref={fileRef}
                 type="file"
@@ -419,33 +554,65 @@ export function Memories() {
                 className="hidden"
                 onChange={handleFileChange}
               />
+
               {/* Or URL */}
-              <input
-                type="url"
-                value={form.image_url.startsWith('data:') ? '' : form.image_url}
-                onChange={e => {
-                  setForm(f => ({ ...f, image_url: e.target.value }))
-                  setImagePreview(e.target.value)
-                }}
-                placeholder="Or paste an image URL…"
-                className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] text-sm focus:outline-none focus:border-[#C94C63] focus:ring-2 focus:ring-[#C94C63]/20 transition-all"
-              />
+              {!imagePreview && (
+                <input
+                  type="url"
+                  value={form.image_url.startsWith('data:') ? '' : form.image_url}
+                  onChange={e => {
+                    setForm(f => ({ ...f, image_url: e.target.value }))
+                    setImagePreview(e.target.value)
+                  }}
+                  placeholder="Or paste an image URL…"
+                  className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] text-sm focus:outline-none focus:border-[#C94C63] focus:ring-2 focus:ring-[#C94C63]/20 transition-all"
+                />
+              )}
+
               {/* Preview */}
               {imagePreview && (
-                <div className="relative">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.97 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  className="relative"
+                >
                   <img
                     src={imagePreview}
                     alt="Preview"
-                    className="w-full h-40 object-cover rounded-2xl"
+                    className="w-full h-44 object-cover rounded-2xl"
+                    style={{ boxShadow: '0 4px 20px rgba(155,17,30,0.12)' }}
                     onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
                   />
+                  {/* Upload indicator */}
+                  {pendingFile && supabaseConfigured && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold"
+                      style={{ background: 'rgba(111,143,95,0.9)', color: 'white' }}>
+                      <CloudUpload size={10} />
+                      Will upload to cloud on save
+                    </div>
+                  )}
+                  {pendingFile && !supabaseConfigured && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold"
+                      style={{ background: 'rgba(183,110,121,0.9)', color: 'white' }}>
+                      📱 Saved locally
+                    </div>
+                  )}
                   <button
-                    onClick={() => { setImagePreview(''); setForm(f => ({ ...f, image_url: '' })) }}
-                    className="absolute top-2 right-2 bg-white/80 rounded-full p-1 text-xs text-[#C94C63]"
+                    onClick={clearImage}
+                    className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full transition-all"
+                    style={{ background: 'rgba(255,255,255,0.92)', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
                   >
-                    ✕
+                    <X size={13} className="text-[#C94C63]" />
                   </button>
-                </div>
+                  {/* Change photo button */}
+                  <button
+                    onClick={() => fileRef.current?.click()}
+                    className="absolute top-2 left-2 flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all"
+                    style={{ background: 'rgba(255,255,255,0.92)', color: '#7A6670', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}
+                  >
+                    <Upload size={10} /> Change
+                  </button>
+                </motion.div>
               )}
             </div>
           </div>
@@ -517,11 +684,17 @@ export function Memories() {
             variant="ruby"
             size="lg"
             className="w-full"
-            loading={saving}
+            loading={saving || uploadingImage}
             disabled={!form.title.trim()}
             onClick={handleSave}
           >
-            {editing ? 'Update Memory' : 'Save this memory 📷'}
+            {uploadingImage
+              ? '☁️ Uploading photo…'
+              : saving
+              ? 'Saving…'
+              : editing
+              ? 'Update Memory'
+              : 'Save this memory 📷'}
           </SoftButton>
         </div>
       </GentleModal>

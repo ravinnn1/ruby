@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { Sidebar } from './Sidebar'
 import { FloatingCalmButton } from './FloatingCalmButton'
 import { CalmOverlay } from '../calm/CalmOverlay'
+import { SecretLetter } from '../ui/SecretLetter'
 import { supabaseConfigured } from '../../lib/supabaseClient'
 import ClickSpark from '../ui/ClickSpark'
 
@@ -69,6 +70,9 @@ export function AppShell({ calmOpen: externalCalmOpen, onCalmClose }: AppShellPr
 
         {/* Calm overlay */}
         <CalmOverlay isOpen={calmOpen} onClose={handleCalmClose} />
+
+        {/* Secret letter — floating envelope bottom-right */}
+        <SecretLetter />
       </div>
     </ClickSpark>
   )
