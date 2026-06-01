@@ -81,9 +81,9 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
     -webkit-backdrop-filter: blur(16px);
   }
 
-  /* ── Animated gradient background ── */
+  /* ── Animated gradient background — respects theme CSS vars ── */
   .gradient-bg {
-    background: linear-gradient(
+    background: var(--theme-bg, linear-gradient(
       135deg,
       #FFF7EF 0%,
       #FADADD 20%,
@@ -91,10 +91,30 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
       #f0faf5 60%,
       #FFF7EF 80%,
       #F8C8DC 100%
-    );
+    ));
     background-size: 400% 400%;
     animation: gradientShift 28s ease infinite;
     position: relative;
+    transition: background 0.6s ease;
+  }
+
+  /* ── Theme: Deep Ruby Night — dark body text ── */
+  [data-theme="deep-ruby-night"] body,
+  [data-theme="deep-ruby-night"] {
+    color: #F5D8E0;
+  }
+  [data-theme="deep-ruby-night"] .gradient-bg {
+    background: linear-gradient(135deg, #0D0508 0%, #1A0A10 35%, #2D0F1A 65%, #1A0A10 100%);
+  }
+
+  /* ── Theme: Pink Matcha ── */
+  [data-theme="pink-matcha"] .gradient-bg {
+    background: linear-gradient(135deg, #F5FFF0 0%, #FADADD 35%, #EEF7E8 65%, #D4EBC4 100%);
+  }
+
+  /* ── Theme: Cream Garden ── */
+  [data-theme="cream-garden"] .gradient-bg {
+    background: linear-gradient(135deg, #FFFBF5 0%, #FFF0E0 30%, #FFE8D6 60%, #F5D5C8 100%);
   }
 
   /* ── Floating background blobs ── */

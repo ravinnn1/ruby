@@ -61,7 +61,7 @@ const PALETTE = [
 ]
 
 const COLS = 50
-const CELL = 10
+const CELL = 16   // larger cells = bigger numbers, easier to read
 
 type Cell = { n: number; filled: boolean; color: string | null }
 
@@ -158,6 +158,10 @@ export function ColorByNumbers() {
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const touchRef = useRef<{ lastDist: number; lastX: number; lastY: number; touches: number }>({ lastDist: 0, lastX: 0, lastY: 0, touches: 0 })
 
+  const zoomIn  = () => setZoom(z => Math.min(5, parseFloat((z + 0.5).toFixed(1))))
+  const zoomOut = () => { setZoom(z => { const nz = Math.max(1, parseFloat((z - 0.5).toFixed(1))); if (nz === 1) setPan({ x: 0, y: 0 }); return nz }) }
+  const zoomReset = () => { setZoom(1); setPan({ x: 0, y: 0 }) }
+
   const progress = grid.length > 0 ? Math.round((grid.filter(c => c.filled).length / grid.length) * 100) : 0
   const complete = progress === 100
 
@@ -251,15 +255,15 @@ export function ColorByNumbers() {
             const x = col * CELL, y = row * CELL
             const cx = x + CELL / 2, cy = y + CELL / 2
             const num = String(cell.n)
-            // Use smaller font for 2-digit numbers
-            ctx.font = num.length > 1 ? 'bold 5px Arial' : 'bold 6.5px Arial'
+            // Font sized to fill the cell nicely
+            ctx.font = num.length > 1 ? 'bold 8px Arial' : 'bold 10px Arial'
             // White halo for contrast
-            ctx.strokeStyle = 'rgba(255,255,255,0.9)'
-            ctx.lineWidth = 2.5
+            ctx.strokeStyle = 'rgba(255,255,255,0.95)'
+            ctx.lineWidth = 3.5
             ctx.lineJoin = 'round'
             ctx.strokeText(num, cx, cy)
             // Dark text
-            ctx.fillStyle = 'rgba(20,10,5,0.92)'
+            ctx.fillStyle = 'rgba(10,5,0,0.95)'
             ctx.fillText(num, cx, cy)
           }
         }
@@ -377,6 +381,16 @@ export function ColorByNumbers() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Zoom controls */}
+      {!loading && !error && (
+        <div className="flex items-center gap-2 justify-center">
+          <button onClick={zoomOut} disabled={zoom <= 1} className="w-9 h-9 rounded-full text-lg font-bold flex items-center justify-center transition-all disabled:opacity-40" style={{ background: 'rgba(248,200,220,0.4)', border: '1.5px solid rgba(201,76,99,0.3)', color: '#9B111E' }}>−</button>
+          <button onClick={zoomReset} className="px-3 py-1.5 rounded-full text-xs font-semibold transition-all" style={{ background: zoom > 1 ? 'rgba(201,76,99,0.12)' : 'rgba(248,200,220,0.2)', border: '1.5px solid rgba(201,76,99,0.25)', color: '#7A6670', minWidth: 56 }}>{zoom.toFixed(1)}×</button>
+          <button onClick={zoomIn}  disabled={zoom >= 5} className="w-9 h-9 rounded-full text-lg font-bold flex items-center justify-center transition-all disabled:opacity-40" style={{ background: 'rgba(248,200,220,0.4)', border: '1.5px solid rgba(201,76,99,0.3)', color: '#9B111E' }}>+</button>
+          <span className="text-[10px] text-[#B8A0A8] ml-1">Pinch or use +/− to zoom</span>
+        </div>
+      )}
 
       {/* Canvas */}
       <div className="flex justify-center overflow-x-auto">

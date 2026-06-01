@@ -5,6 +5,8 @@ import { supabase } from '../lib/supabaseClient'
 import { RubyCard } from '../components/ui/RubyCard'
 import { SoftButton } from '../components/ui/SoftButton'
 import { LoadingState } from '../components/ui/LoadingState'
+import { AvatarSVG, defaultAvatar } from '../components/avatar/AvatarSVG'
+import type { AvatarConfig } from '../components/avatar/AvatarSVG'
 import toast from 'react-hot-toast'
 
 const hairColors = ['#3A2A2F', '#C94C63', '#A8C686', '#F8C8DC', '#9B111E', '#B76E79', '#6F8F5F']
@@ -27,13 +29,8 @@ export function Profile() {
   const [displayName, setDisplayName] = useState('Ruby')
   const [calmingPhrase, setCalmingPhrase] = useState('')
   const [comfortActivity, setComfortActivity] = useState('')
-  const [favoriteColor, setFavoriteColor] = useState('#F8C8DC')
-
-  // Avatar
-  const [hairColor, setHairColor] = useState('#3A2A2F')
-  const [outfitColor, setOutfitColor] = useState('#F8C8DC')
-  const [accessory, setAccessory] = useState('none')
-  const [bgId, setBgId] = useState('blush')
+  // Full avatar config from AvatarCreator
+  const [avatarConfig, setAvatarConfig] = useState<AvatarConfig>(defaultAvatar)
 
   useEffect(() => { if (user) loadProfile() }, [user])
 
@@ -45,14 +42,10 @@ export function Profile() {
       setProfileId(data.id)
       setDisplayName(data.display_name || 'Ruby')
       setCalmingPhrase(data.calming_phrase || '')
-      const cfg = data.avatar_config || {}
-      setHairColor(cfg.hairColor || '#3A2A2F')
-      setOutfitColor(cfg.outfitColor || '#F8C8DC')
-      setAccessory(cfg.accessory || 'none')
-      setBgId(cfg.bgId || 'blush')
-      setFavoriteColor(cfg.favoriteColor || '#F8C8DC')
-      // Support both column names for backwards compatibility
       setComfortActivity(data.favorite_activity || data.comfort_activity || '')
+      if (data.avatar_config && Object.keys(data.avatar_config).length > 0) {
+        setAvatarConfig({ ...defaultAvatar, ...data.avatar_config })
+      }
     }
     setLoading(false)
   }
@@ -64,8 +57,7 @@ export function Profile() {
       id: user.id,
       display_name: displayName,
       calming_phrase: calmingPhrase,
-      favorite_activity: comfortActivity,   // canonical column name per schema
-      avatar_config: { hairColor, outfitColor, accessory, bgId, favoriteColor },
+      favorite_activity: comfortActivity,
       updated_at: new Date().toISOString(),
     }
     const { error } = profileId
@@ -78,8 +70,6 @@ export function Profile() {
     }
   }
 
-  const bg = backgrounds.find(b => b.id === bgId)
-
   if (loading) return <LoadingState />
 
   return (
@@ -89,33 +79,20 @@ export function Profile() {
         <p className="text-[#7A6670] text-sm mt-0.5">This is you. Make it feel like home.</p>
       </div>
 
-      {/* Avatar preview */}
+      {/* Avatar preview — shows the full AvatarSVG from AvatarCreator */}
       <RubyCard variant="gem">
         <div className="flex flex-col items-center gap-4">
-          <div
-            className="w-32 h-32 rounded-full flex items-center justify-center relative overflow-hidden"
-            style={{ background: bg?.style }}
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            style={{ borderRadius: '50%', overflow: 'hidden', boxShadow: '0 8px 32px rgba(155,17,30,0.18)' }}
           >
-            {/* Simple CSS avatar */}
-            <div className="relative">
-              {/* Head */}
-              <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ backgroundColor: '#FADADD' }}>
-                {/* Hair */}
-                <div className="absolute -top-3 left-0 right-0 h-8 rounded-t-full" style={{ backgroundColor: hairColor }} />
-                {/* Face */}
-                <div className="relative z-10 text-2xl">🙂</div>
-              </div>
-              {/* Outfit hint */}
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-6 rounded-t-full" style={{ backgroundColor: outfitColor }} />
-              {/* Accessory */}
-              {accessory !== 'none' && (
-                <div className="absolute -top-5 left-1/2 -translate-x-1/2 text-lg">
-                  {accessory.includes('crown') ? '👑' : accessory.includes('bow') ? '🎀' : accessory.includes('heart') ? '💗' : accessory.includes('gem') ? '💎' : '🌸'}
-                </div>
-              )}
-            </div>
-          </div>
+            <AvatarSVG config={avatarConfig} size={140} />
+          </motion.div>
           <p className="font-display text-lg text-[#3A2A2F]">{displayName}</p>
+          <a href="/avatar" className="text-xs text-[#C94C63] underline underline-offset-2">
+            ✏️ Edit avatar in Avatar Creator
+          </a>
         </div>
       </RubyCard>
 
@@ -139,45 +116,6 @@ export function Profile() {
             <input type="text" value={comfortActivity} onChange={e => setComfortActivity(e.target.value)}
               placeholder="e.g. Watching comfort shows"
               className="w-full px-4 py-3 rounded-2xl bg-white/80 border border-[#F8C8DC] text-[#3A2A2F] placeholder-[#B8A0A8] text-sm focus:outline-none focus:border-[#C94C63] transition-all" />
-          </div>
-        </div>
-      </RubyCard>
-
-      {/* Avatar builder */}
-      <RubyCard variant="default">
-        <h2 className="font-display text-base text-[#3A2A2F] mb-4">Avatar</h2>
-        <div className="space-y-4">
-          <div>
-            <p className="text-xs text-[#7A6670] mb-2">Hair color</p>
-            <div className="flex gap-2 flex-wrap">
-              {hairColors.map(c => (
-                <button key={c} onClick={() => setHairColor(c)} className={`w-8 h-8 rounded-full border-2 transition-all ${hairColor === c ? 'border-[#C94C63] scale-110' : 'border-transparent'}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-[#7A6670] mb-2">Outfit color</p>
-            <div className="flex gap-2 flex-wrap">
-              {outfitColors.map(c => (
-                <button key={c} onClick={() => setOutfitColor(c)} className={`w-8 h-8 rounded-full border-2 transition-all ${outfitColor === c ? 'border-[#C94C63] scale-110' : 'border-transparent'}`} style={{ backgroundColor: c }} />
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-[#7A6670] mb-2">Accessory</p>
-            <div className="flex flex-wrap gap-1.5">
-              {accessories.map(acc => (
-                <button key={acc} onClick={() => setAccessory(acc)} className={`px-3 py-1.5 rounded-full text-xs transition-all ${accessory === acc ? 'bg-[#C94C63] text-white' : 'bg-white/70 border border-[#F8C8DC] text-[#7A6670]'}`}>{acc}</button>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="text-xs text-[#7A6670] mb-2">Background</p>
-            <div className="flex gap-2 flex-wrap">
-              {backgrounds.map(bg => (
-                <button key={bg.id} onClick={() => setBgId(bg.id)} className={`w-10 h-10 rounded-2xl border-2 transition-all ${bgId === bg.id ? 'border-[#C94C63] scale-110' : 'border-transparent'}`} style={{ background: bg.style }} title={bg.label} />
-              ))}
-            </div>
           </div>
         </div>
       </RubyCard>
