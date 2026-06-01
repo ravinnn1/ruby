@@ -28,7 +28,7 @@ const GALLERY: GalleryItem[] = [
   { src: '/Volleyball.jpg',              label: 'Volleyball',  emoji: '🏐' },
   { src: '/Ice Skating.jpg',             label: 'Ice Skating', emoji: '🏒' },
   { src: '/Ballerina.jpg',               label: 'Ballerina',   emoji: '🩰' },
-  { src: '/Boots.jpg',                   label: 'Boots',       emoji: '👢' },
+  { src: '/Boots.jpg',                   label: 'Boots',       emoji: '👢', cols: 35 },
   { src: '/Moose.jpeg', label: 'Moose 🐾', emoji: '🐶', redBoost: 30, greenBoost: -10, blueBoost: -20, saturation: 1.4, cols: 70, cropTop: 0.20 },
 ]
 
@@ -202,7 +202,8 @@ export function ColorByNumbers() {
     img.onerror = () => { setError('Failed to load image.'); setLoading(false) }
     // Allow cross-origin images (e.g. Unsplash)
     if (src.startsWith('http')) img.crossOrigin = 'anonymous'
-    img.src = src
+    // Encode the path so filenames with spaces load correctly
+    img.src = src.startsWith('/') ? encodeURI(src) : src
   }, [])
 
   useEffect(() => {
