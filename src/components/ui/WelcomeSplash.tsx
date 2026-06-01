@@ -30,15 +30,50 @@ export function WelcomeSplash({ onDismiss }: WelcomeSplashProps) {
           boxShadow: '0 16px 64px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,100,100,0.08)',
         }}
       >
-        {/* Ruby gem */}
+        {/* CSS Garnet Ruby gem — no text label */}
         <motion.div
           initial={{ scale: 0.4, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1, duration: 0.7, type: 'spring', stiffness: 240, damping: 18 }}
-          className="text-7xl mb-6"
+          className="flex justify-center mb-6"
           aria-hidden="true"
         >
-          💎
+          <style>{`
+            .splash-ruby {
+              display: block;
+              width: 90px;
+              height: 90px;
+              position: relative;
+              background: rgba(255,255,255,0);
+              background-image:
+                linear-gradient(-45deg, rgba(255,255,0,.10) 21.2%, rgba(255,0,0,.15) 71.2%, rgba(0,0,0,0) 71.2%),
+                linear-gradient(22.6deg, rgba(100,10,10,.35) 30%, rgba(0,0,0,0) 30%),
+                linear-gradient(67.8deg, rgba(0,0,0,0) 70%, rgba(80,5,5,.45) 70%),
+                linear-gradient(-45deg, rgba(139,20,20,.55) 71.2%, rgba(0,0,0,0) 71.2%),
+                linear-gradient(-45deg, rgba(100,10,10,1) 50%, rgba(0,0,0,0) 50%);
+              transform: rotate(45deg);
+              box-shadow:
+                6px 6px 8px rgba(0,0,0,.3),
+                inset -4px -4px 6px rgba(255,255,255,.12),
+                inset -3px -3px rgba(80,5,5,.2);
+              animation: splashRubyFloat 3s ease-in-out infinite;
+            }
+            .splash-ruby::after {
+              content: "";
+              display: block;
+              width: 0;
+              height: 0;
+              border-width: 26px 27px;
+              border-style: solid;
+              border-color: transparent rgba(139,20,20,.45) transparent transparent;
+              transform: rotate(45deg) translateY(2px);
+            }
+            @keyframes splashRubyFloat {
+              0%,100% { transform: rotate(45deg) translateY(0); }
+              50% { transform: rotate(45deg) translateY(-8px); }
+            }
+          `}</style>
+          <div className="splash-ruby" />
         </motion.div>
 
         {/* Affirmations */}
@@ -54,7 +89,7 @@ export function WelcomeSplash({ onDismiss }: WelcomeSplashProps) {
           </p>
           <p className="text-2xl md:text-3xl font-bold leading-snug"
              style={{ color: '#FFB0C0', fontFamily: 'Georgia, serif', textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
-            You are lovely.
+            You are gorgeous.
           </p>
           <p className="text-2xl md:text-3xl font-bold leading-snug"
              style={{ color: '#FFC8A0', fontFamily: 'Georgia, serif', textShadow: '0 2px 12px rgba(0,0,0,0.6)' }}>
@@ -81,7 +116,7 @@ export function WelcomeSplash({ onDismiss }: WelcomeSplashProps) {
               border: '1px solid rgba(255,150,150,0.2)',
             }}
           >
-            💎 Tap to enter your safe place
+            Tap to enter your safe place
           </div>
         </motion.div>
       </div>

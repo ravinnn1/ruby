@@ -102,19 +102,54 @@ export function Home({ onOpenCalm }: HomeProps) {
             backdropFilter: 'blur(12px)',
           }}
         >
-          {/* Decorative ruby gem */}
-          <motion.div
-            animate={{ y: [0, -8, 0], rotate: [45, 48, 45] }}
-            transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-            className="mx-auto mb-4 w-16 h-16 flex items-center justify-center rounded-2xl text-3xl"
-            style={{
-              background: 'linear-gradient(135deg, #9B111E, #C94C63)',
-              boxShadow: '0 8px 32px rgba(155,17,30,0.45), 0 0 60px rgba(201,76,99,0.2)',
-              transform: 'rotate(45deg)',
-            }}
-          >
-            <span style={{ transform: 'rotate(-45deg)', display: 'block' }}>💎</span>
-          </motion.div>
+        {/* CSS Garnet Ruby gem — no text label */}
+          <style>{`
+            .home-ruby {
+              display: block;
+              width: 120px;
+              height: 120px;
+              position: relative;
+              background: rgba(255,255,255,0);
+              background-image:
+                linear-gradient(-45deg, rgba(255,255,0,.10) 21.2%, rgba(255,0,0,.15) 71.2%, rgba(0,0,0,0) 71.2%),
+                linear-gradient(22.6deg, rgba(100,10,10,.35) 30%, rgba(0,0,0,0) 30%),
+                linear-gradient(67.8deg, rgba(0,0,0,0) 70%, rgba(80,5,5,.45) 70%),
+                linear-gradient(-45deg, rgba(139,20,20,.55) 71.2%, rgba(0,0,0,0) 71.2%),
+                linear-gradient(-45deg, rgba(100,10,10,1) 50%, rgba(0,0,0,0) 50%);
+              transform: rotate(45deg);
+              box-shadow:
+                6px 6px 8px rgba(0,0,0,.22),
+                inset -4px -4px 6px rgba(255,255,255,.12),
+                inset -3px -3px rgba(80,5,5,.2);
+              transition: .6s all;
+              margin: 0 auto 1.5rem;
+            }
+            .home-ruby:hover {
+              transform: rotate(45deg) translate(-6px,-6px);
+              box-shadow:
+                14px 14px 18px rgba(0,0,0,.28),
+                inset -4px -4px 6px rgba(255,255,255,.15),
+                inset -3px -3px rgba(80,5,5,.6);
+              transition: .4s all;
+            }
+            .home-ruby::after {
+              content: "";
+              display: block;
+              width: 0;
+              height: 0;
+              border-width: 35px 36px;
+              border-style: solid;
+              border-color: transparent rgba(139,20,20,.45) transparent transparent;
+              transform: rotate(45deg) translateY(2px);
+            }
+          `}</style>
+          <div
+            className="home-ruby"
+            onClick={onOpenCalm}
+            title="Open calm space"
+            role="button"
+            aria-label="Open calm space"
+          />
 
           <motion.h1
             initial={{ opacity: 0, y: 8 }}
@@ -130,7 +165,9 @@ export function Home({ onOpenCalm }: HomeProps) {
             transition={{ delay: 0.35 }}
             className="text-[#7A6670] text-sm mb-3"
           >
-            {formatDate(new Date().toISOString())}
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            {' · '}
+            {new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
           </motion.p>
           <motion.p
             initial={{ opacity: 0, y: 4 }}
