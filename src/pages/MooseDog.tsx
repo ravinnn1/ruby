@@ -279,6 +279,7 @@ export function MooseDog() {
   const nextItemId = useRef(0)
   const stateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const sleepTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const barkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dogStateRef = useRef<DogState>('idle')
 
   const showMsg = useCallback((msg: string, duration = 2500) => {
@@ -290,6 +291,30 @@ export function MooseDog() {
     dogStateRef.current = s
     setDogState(s)
   }, [])
+
+  // Random idle barks
+  useEffect(() => {
+    const scheduleRandomBark = () => {
+      // Random interval between 20s and 60s
+      const delay = 20000 + Math.random() * 40000
+      return setTimeout(() => {
+        if (dogStateRef.current === 'idle' || dogStateRef.current === 'walking') {
+          const randomBarks = [
+            'Woof! 🐾', 'Bork! 🐾', 'Arf! 🐶', '*sniffs the air* 👃',
+            'Woof woof! 🐕', '*happy wiggle* 🐾', 'Bork bork! 🐶',
+            '*perks ears up* 👂', 'Arf arf! 🐾', '*tail wag* 🐾',
+          ]
+          showMsg(randomBarks[Math.floor(Math.random() * randomBarks.length)], 2000)
+          setDogStateSync('happy')
+          setTongue(true)
+          setTimeout(() => { setTongue(false); setDogStateSync('idle') }, 1200)
+        }
+        barkTimerRef.current = scheduleRandomBark()
+      }, delay)
+    }
+    barkTimerRef.current = scheduleRandomBark()
+    return () => { if (barkTimerRef.current) clearTimeout(barkTimerRef.current) }
+  }, [showMsg, setDogStateSync])
 
   // Reset sleep timer on any interaction
   const resetSleepTimer = useCallback(() => {
