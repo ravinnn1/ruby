@@ -84,68 +84,104 @@ export function Home({ onOpenCalm }: HomeProps) {
 
   return (
     <div className="relative min-h-screen">
-      {/* ── Shader-doodle animated background ── */}
+      {/* ── Shader-doodle animated background — Fractured Ruby low-poly ── */}
       <div className="home-shader-bg" aria-hidden="true">
         {/* @ts-ignore — shader-doodle is a web component */}
         <shader-doodle>
           <script type="x-shader/x-fragment">{`
-            precision mediump float;
+            precision highp float;
             uniform float u_time;
-            uniform vec2 u_resolution;
+            uniform vec2  u_resolution;
 
-            // Smooth noise
-            float hash(vec2 p) {
+            // ── Hash / random ──────────────────────────────────────────
+            vec2 hash2(vec2 p) {
+              p = vec2(dot(p, vec2(127.1, 311.7)),
+                       dot(p, vec2(269.5, 183.3)));
+              return fract(sin(p) * 43758.5453);
+            }
+            float hash1(vec2 p) {
               return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
             }
-            float noise(vec2 p) {
-              vec2 i = floor(p);
-              vec2 f = fract(p);
-              f = f * f * (3.0 - 2.0 * f);
-              return mix(
-                mix(hash(i), hash(i + vec2(1,0)), f.x),
-                mix(hash(i + vec2(0,1)), hash(i + vec2(1,1)), f.x),
-                f.y
-              );
-            }
-            float fbm(vec2 p) {
-              float v = 0.0; float a = 0.5;
-              for (int i = 0; i < 5; i++) {
-                v += a * noise(p);
-                p *= 2.0; a *= 0.5;
+
+            // ── Voronoi — returns (dist-to-nearest, cell-id) ──────────
+            vec3 voronoi(vec2 x, float t) {
+              vec2 n = floor(x);
+              vec2 f = fract(x);
+              float minDist = 8.0;
+              float minDist2 = 8.0;
+              vec2  minCell = vec2(0.0);
+              for (int j = -2; j <= 2; j++) {
+                for (int i = -2; i <= 2; i++) {
+                  vec2 g = vec2(float(i), float(j));
+                  vec2 o = hash2(n + g);
+                  // Animate cell centres gently
+                  o = 0.5 + 0.5 * sin(t * 0.35 + 6.2831 * o);
+                  vec2 r = g + o - f;
+                  float d = dot(r, r);
+                  if (d < minDist) {
+                    minDist2 = minDist;
+                    minDist  = d;
+                    minCell  = n + g;
+                  } else if (d < minDist2) {
+                    minDist2 = d;
+                  }
+                }
               }
-              return v;
+              return vec3(sqrt(minDist), sqrt(minDist2), hash1(minCell));
+            }
+
+            // ── Colour palette — ruby / garnet / blush / gold ─────────
+            vec3 rubyPalette(float t) {
+              // t in [0,1] → deep garnet → ruby red → coral → warm gold
+              vec3 a = vec3(0.50, 0.05, 0.08);   // deep garnet
+              vec3 b = vec3(0.85, 0.12, 0.18);   // ruby red
+              vec3 c = vec3(0.95, 0.35, 0.20);   // coral / orange
+              vec3 d = vec3(1.00, 0.82, 0.45);   // warm gold / highlight
+              if (t < 0.33) return mix(a, b, t / 0.33);
+              if (t < 0.66) return mix(b, c, (t - 0.33) / 0.33);
+              return mix(c, d, (t - 0.66) / 0.34);
             }
 
             void main() {
               vec2 uv = gl_FragCoord.xy / u_resolution.xy;
-              float t = u_time * 0.12;
+              // Keep aspect ratio, centre at (0,0)
+              vec2 p = (gl_FragCoord.xy * 2.0 - u_resolution.xy) / min(u_resolution.x, u_resolution.y);
+              float t = u_time;
 
-              // Deep garnet / ruby base
-              vec3 garnet  = vec3(0.42, 0.06, 0.10);
-              vec3 ruby    = vec3(0.60, 0.10, 0.18);
-              vec3 crimson = vec3(0.72, 0.14, 0.22);
-              vec3 blush   = vec3(0.95, 0.78, 0.85);
-              vec3 dark    = vec3(0.18, 0.03, 0.06);
+              // Two layers of Voronoi at different scales for depth
+              vec3 v1 = voronoi(p * 3.2 + vec2(0.0), t);
+              vec3 v2 = voronoi(p * 5.8 + vec2(3.7, 1.3), t * 0.7);
 
-              // Flowing noise layers
-              float n1 = fbm(uv * 2.8 + vec2(t * 0.6, t * 0.4));
-              float n2 = fbm(uv * 1.6 + vec2(-t * 0.3, t * 0.5) + n1 * 0.6);
-              float n3 = fbm(uv * 4.0 + vec2(t * 0.2, -t * 0.7) + n2 * 0.4);
+              // Cell colour — each cell gets a unique hue from the palette
+              float cellVal = v1.z;                          // unique per cell
+              float edgeDist = v1.y - v1.x;                 // distance to edge
+              float edge = smoothstep(0.0, 0.08, edgeDist); // sharp facet edge
 
-              // Radial vignette — darker at edges
-              float dist = length(uv - 0.5) * 1.4;
-              float vignette = 1.0 - smoothstep(0.3, 1.0, dist);
+              // Base colour from palette, varied per cell
+              vec3 col = rubyPalette(fract(cellVal * 3.7 + 0.1));
 
-              // Mix colours
-              vec3 col = mix(dark, garnet, n1);
-              col = mix(col, ruby, n2 * 0.7);
-              col = mix(col, crimson, n3 * 0.4);
-              col = mix(col, blush, n3 * n1 * 0.15);
-              col *= vignette;
+              // Lighter highlight on cells closer to centre
+              float radial = 1.0 - length(p) * 0.55;
+              col = mix(col, col * 1.6 + vec3(0.15, 0.05, 0.05), radial * 0.5);
 
-              // Subtle shimmer
-              float shimmer = noise(uv * 12.0 + t * 2.0) * 0.06;
-              col += shimmer * vec3(1.0, 0.6, 0.7);
+              // Second Voronoi layer adds sub-facet shimmer
+              float shimmer = v2.z * 0.18;
+              col += shimmer * vec3(1.0, 0.7, 0.5);
+
+              // Dark facet edges — the "fractured" look
+              col *= edge;
+              col = mix(vec3(0.08, 0.01, 0.02), col, edge);
+
+              // Bright specular glint on some cells
+              float glint = pow(max(0.0, 1.0 - v1.x * 4.0), 6.0) * v1.z;
+              col += glint * vec3(1.0, 0.9, 0.8) * 0.6;
+
+              // Vignette — darker corners
+              float vig = 1.0 - smoothstep(0.5, 1.4, length(p));
+              col *= vig;
+
+              // Gamma
+              col = pow(max(col, vec3(0.0)), vec3(0.85));
 
               gl_FragColor = vec4(col, 1.0);
             }
