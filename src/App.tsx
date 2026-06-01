@@ -27,6 +27,9 @@ import { Draw } from './pages/Draw'
 import { ADHDFun } from './pages/ADHDFun'
 import { Games } from './pages/Games'
 import { AvatarCreator } from './pages/AvatarCreator'
+import { Calendar } from './pages/Calendar'
+import { ArcadeGames } from './pages/ArcadeGames'
+import { ColorByNumbers } from './pages/ColorByNumbers'
 
 const toastStyle = {
   background: '#FFF7EF',
@@ -41,7 +44,6 @@ function AppRoutes() {
   const { user, loading } = useAuth()
   const [calmOpen, setCalmOpen] = useState(false)
 
-  // Splash shown once per session, before anything else
   const [splashDone, setSplashDone] = useState(() => {
     return !!sessionStorage.getItem('ruby_splash_seen')
   })
@@ -91,6 +93,9 @@ function AppRoutes() {
         <Route path="/distraction" element={<Distraction />} />
         <Route path="/adhd" element={<ADHDFun />} />
         <Route path="/games" element={<Games />} />
+        <Route path="/arcade" element={<ArcadeGames />} />
+        <Route path="/calendar" element={<Calendar />} />
+        <Route path="/color" element={<ColorByNumbers />} />
         <Route path="/avatar" element={<AvatarCreator />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/profile" element={<Profile />} />
