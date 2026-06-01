@@ -238,9 +238,23 @@ function TowerBlocks() {
     return () => cancelAnimationFrame(sRef.animId)
   }, [started])
 
+  // Spacebar support
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.code !== 'Space') return
+      e.preventDefault()
+      const s = stateRef.current
+      if (!started) { startGame(); return }
+      if (s.gameOver) { startGame(); return }
+      drop()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [started, drop, startGame])
+
   return (
     <div className="space-y-3 flex flex-col items-center">
-      <p className="text-xs text-white/60 text-center">Tap / click to drop the block. Stack as high as you can!</p>
+      <p className="text-xs text-white/60 text-center">Tap / click / <kbd style={{background:'rgba(255,255,255,0.15)',borderRadius:4,padding:'0 4px',fontSize:10}}>Space</kbd> to drop. Stack as high as you can!</p>
       {!started ? (
         <motion.button
           whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
@@ -397,6 +411,7 @@ function SnakeGame() {
     if (!started) return
     const onKey = (e: KeyboardEvent) => {
       const s = stateRef.current
+      if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault()
       if (e.key === 'ArrowUp' && s.dir.y !== 1) s.nextDir = { x: 0, y: -1 }
       if (e.key === 'ArrowDown' && s.dir.y !== -1) s.nextDir = { x: 0, y: 1 }
       if (e.key === 'ArrowLeft' && s.dir.x !== 1) s.nextDir = { x: -1, y: 0 }
